@@ -1,0 +1,360 @@
+<script>
+	import { goto } from '$app/navigation';
+	import { page } from '$app/stores';
+	import { onMount } from 'svelte';
+	import SkeletonCard from '$lib/components/SkeletonCard.svelte';
+	import SkeletonTableRow from '$lib/components/SkeletonTableRow.svelte';
+
+	// Loading state
+	let isLoading = true;
+
+	// Sample data - will be replaced with API calls
+	let trips = [
+		{
+			id: 1,
+			date: '2024-01-24',
+			truck: 'Volvo VNL 860 #402',
+			driver: 'Mike Ross',
+			customer: 'Walmart Logistics',
+			routeFrom: 'Dallas, TX',
+			routeTo: 'Houston, TX',
+			agreedPrice: 1200.00,
+			totalCost: 450.00,
+			totalReceived: 1200.00,
+			status: 'Completed'
+		},
+		{
+			id: 2,
+			date: '2024-01-23',
+			truck: 'Freightliner #305',
+			driver: 'John Doe',
+			customer: 'Amazon Freight',
+			routeFrom: 'Seattle, WA',
+			routeTo: 'Portland, OR',
+			agreedPrice: 950.00,
+			totalCost: 300.00,
+			totalReceived: 950.00,
+			status: 'Completed'
+		},
+		{
+			id: 3,
+			date: '2024-01-21',
+			truck: 'Kenworth T680 #118',
+			driver: 'Sarah Smith',
+			customer: 'Target Corp',
+			routeFrom: 'Miami, FL',
+			routeTo: 'Orlando, FL',
+			agreedPrice: 800.00,
+			totalCost: 950.00,
+			totalReceived: 500.00,
+			status: 'Pending'
+		}
+	];
+
+	// Filters
+	let dateRange = '';
+	let selectedTruck = '';
+	let selectedDriver = '';
+	let selectedStatus = '';
+
+	// Read truck filter from URL on mount
+	onMount(async () => {
+		// Simulate API call delay
+		await new Promise(resolve => setTimeout(resolve, 800));
+		
+		const truckParam = $page.url.searchParams.get('truck');
+		if (truckParam) {
+			// Find exact or partial matching truck in the list
+			const matchingTruck = trucks.find(t => t === truckParam || t.includes(truckParam));
+			if (matchingTruck) {
+				selectedTruck = matchingTruck;
+			} else {
+				// If no exact match, try to find by truck name or plate
+				const decodedParam = decodeURIComponent(truckParam);
+				const matchingTruck2 = trucks.find(t => t.toLowerCase().includes(decodedParam.toLowerCase()));
+				if (matchingTruck2) {
+					selectedTruck = matchingTruck2;
+				}
+			}
+		}
+		
+		isLoading = false;
+	});
+
+	// Summary calculations
+	$: totalRevenue = trips.reduce((sum, trip) => sum + trip.totalReceived, 0);
+	$: totalProfit = trips.reduce((sum, trip) => {
+		const profit = trip.totalReceived - trip.totalCost;
+		return sum + profit;
+	}, 0);
+	$: activeTrips = trips.filter(trip => trip.status === 'Pending').length;
+
+	// Calculate profit/loss for a trip
+	function calculateProfit(trip) {
+		return trip.totalReceived - trip.totalCost;
+	}
+
+	// Format currency (using ₦ for Naira as per plan)
+	function formatCurrency(amount) {
+		return new Intl.NumberFormat('en-NG', {
+			style: 'currency',
+			currency: 'NGN',
+			minimumFractionDigits: 2
+		}).format(amount);
+	}
+
+	// Format date
+	function formatDate(dateString) {
+		const date = new Date(dateString);
+		return date.toLocaleDateString('en-US', { 
+			year: 'numeric', 
+			month: 'short', 
+			day: 'numeric' 
+		});
+	}
+
+	// Get unique values for filters
+	$: trucks = [...new Set(trips.map(t => t.truck))];
+	$: drivers = [...new Set(trips.map(t => t.driver))];
+	$: statuses = ['Pending', 'Completed'];
+
+	// Filter trips
+	$: filteredTrips = trips.filter(trip => {
+		if (selectedTruck && trip.truck !== selectedTruck) return false;
+		if (selectedDriver && trip.driver !== selectedDriver) return false;
+		if (selectedStatus && trip.status !== selectedStatus) return false;
+		
+		// Date filtering - filter by exact date match
+		if (dateRange) {
+			const tripDate = new Date(trip.date);
+			const filterDate = new Date(dateRange);
+			// Compare dates (ignore time)
+			if (tripDate.toDateString() !== filterDate.toDateString()) return false;
+		}
+		
+		return true;
+	});
+
+	function handleLogout() {
+		// TODO: Implement logout
+		goto('/login');
+	}
+</script>
+
+<div class="min-h-screen bg-gray-50">
+	<!-- Navigation -->
+	<nav class="bg-white border-b border-gray-200">
+		<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+			<div class="flex justify-between items-center h-16">
+				<!-- Logo -->
+				<div class="flex items-center gap-2">
+					<div class="w-8 h-8 bg-blue-600 rounded flex items-center justify-center">
+						<svg class="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 20 20">
+							<path d="M8 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0zM15 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0z" />
+							<path d="M3 4a1 1 0 00-1 1v10a1 1 0 001 1h1.05a2.5 2.5 0 014.9 0H10a1 1 0 001-1V5a1 1 0 00-1-1H3zM14 7a1 1 0 00-1 1v6.05A2.5 2.5 0 0115.95 16H17a1 1 0 001-1v-5a1 1 0 00-.293-.707l-2-2A1 1 0 0015 7h-1z" />
+						</svg>
+					</div>
+					<span class="text-xl font-bold text-black">TruckBooks</span>
+				</div>
+
+				<!-- Navigation Links -->
+				<div class="flex items-center gap-6">
+					<a href="/trips" class="text-blue-600 font-medium border-b-2 border-blue-600 pb-1">Trips</a>
+					<a href="/trucks" class="text-gray-700 hover:text-gray-900">Trucks</a>
+					<a href="/outstanding-payments" class="text-gray-700 hover:text-gray-900">Outstanding Payments</a>
+					<button
+						on:click={handleLogout}
+						class="text-gray-700 hover:text-gray-900"
+					>
+						Logout
+					</button>
+				</div>
+			</div>
+		</div>
+	</nav>
+
+	<!-- Main Content -->
+	<main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+		<!-- Header -->
+		<div class="flex justify-between items-center mb-8">
+			<div>
+				<h1 class="text-3xl font-bold text-gray-900 mb-2">Trips Dashboard</h1>
+				<p class="text-gray-600">Overview of all scheduled and completed hauls.</p>
+			</div>
+			<button
+				on:click={() => goto('/trips/add')}
+				class="bg-blue-600 text-white px-6 py-2.5 rounded-lg font-medium hover:bg-blue-700 transition-colors"
+			>
+				+ Add Trip
+			</button>
+		</div>
+
+		<!-- Summary Cards -->
+		<div class="grid md:grid-cols-3 gap-6 mb-8">
+			{#if isLoading}
+				<SkeletonCard />
+				<SkeletonCard />
+				<SkeletonCard />
+			{:else}
+				<div class="bg-white rounded-lg border border-gray-200 p-6">
+					<div class="flex justify-between items-start mb-2">
+						<div>
+							<p class="text-sm text-gray-600 mb-1">Total Revenue</p>
+							<p class="text-2xl font-bold text-gray-900">{formatCurrency(totalRevenue)}</p>
+							<p class="text-xs text-gray-500 mt-1">This month</p>
+						</div>
+					</div>
+				</div>
+				<div class="bg-white rounded-lg border border-gray-200 p-6">
+					<div class="flex justify-between items-start mb-2">
+						<div>
+							<p class="text-sm text-gray-600 mb-1">Total Profit</p>
+							<p class="text-2xl font-bold {totalProfit >= 0 ? 'text-green-600' : 'text-red-600'}">
+								{formatCurrency(totalProfit)}
+							</p>
+							<p class="text-xs text-gray-500 mt-1">This month</p>
+						</div>
+					</div>
+				</div>
+				<div class="bg-white rounded-lg border border-gray-200 p-6">
+					<div class="flex justify-between items-start mb-2">
+						<div>
+							<p class="text-sm text-gray-600 mb-1">Active / Pending Trips</p>
+							<p class="text-2xl font-bold text-gray-900">{activeTrips}</p>
+							<p class="text-xs text-gray-500 mt-1">Currently in transit</p>
+						</div>
+					</div>
+				</div>
+			{/if}
+		</div>
+
+		<!-- Filters -->
+		<div class="bg-white rounded-lg border border-gray-200 p-4 mb-6">
+			<div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+				<div>
+					<label for="dateRange" class="block text-sm font-medium text-gray-700 mb-1">Date Range</label>
+					<input
+						type="date"
+						id="dateRange"
+						bind:value={dateRange}
+						class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none text-sm"
+					/>
+				</div>
+				<div>
+					<label for="truck" class="block text-sm font-medium text-gray-700 mb-1">Truck</label>
+					<select
+						id="truck"
+						bind:value={selectedTruck}
+						class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none text-sm"
+					>
+						<option value="">All Trucks</option>
+						{#each trucks as truck}
+							<option value={truck}>{truck}</option>
+						{/each}
+					</select>
+				</div>
+				<div>
+					<label for="driver" class="block text-sm font-medium text-gray-700 mb-1">Driver</label>
+					<select
+						id="driver"
+						bind:value={selectedDriver}
+						class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none text-sm"
+					>
+						<option value="">All Drivers</option>
+						{#each drivers as driver}
+							<option value={driver}>{driver}</option>
+						{/each}
+					</select>
+				</div>
+				<div>
+					<label for="status" class="block text-sm font-medium text-gray-700 mb-1">Status</label>
+					<select
+						id="status"
+						bind:value={selectedStatus}
+						class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none text-sm"
+					>
+						<option value="">All Status</option>
+						{#each statuses as status}
+							<option value={status}>{status}</option>
+						{/each}
+					</select>
+				</div>
+			</div>
+		</div>
+
+		<!-- Trips Table -->
+		<div class="bg-white rounded-lg border border-gray-200 overflow-hidden">
+			<div class="overflow-x-auto">
+				<table class="w-full">
+					<thead class="bg-gray-50 border-b border-gray-200">
+						<tr>
+							<th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+							<th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Truck</th>
+							<th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Driver</th>
+							<th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Customer</th>
+							<th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Route</th>
+							<th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Agreed Price</th>
+							<th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Total Cost</th>
+							<th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Profit / Loss</th>
+							<th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+						</tr>
+					</thead>
+					<tbody class="bg-white divide-y divide-gray-200">
+						{#if isLoading}
+							{#each Array(5) as _}
+								<SkeletonTableRow columns={9} />
+							{/each}
+						{:else if filteredTrips.length > 0}
+							{#each filteredTrips as trip}
+								{@const profit = calculateProfit(trip)}
+								<tr 
+									class="hover:bg-gray-50 cursor-pointer"
+									on:click={() => goto(`/trips/add?id=${trip.id}`)}
+								>
+									<td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+										{formatDate(trip.date)}
+									</td>
+									<td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+										{trip.truck}
+									</td>
+									<td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+										{trip.driver}
+									</td>
+									<td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+										{trip.customer}
+									</td>
+									<td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+										{trip.routeFrom} → {trip.routeTo}
+									</td>
+									<td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-right">
+										{formatCurrency(trip.agreedPrice)}
+									</td>
+									<td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-right">
+										{formatCurrency(trip.totalCost)}
+									</td>
+									<td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-right">
+										<span class={profit >= 0 ? 'text-green-600' : 'text-red-600'}>
+											{profit >= 0 ? '+' : ''}{formatCurrency(profit)}
+										</span>
+									</td>
+									<td class="px-6 py-4 whitespace-nowrap">
+										<span class="px-2 py-1 text-xs font-medium rounded-full {trip.status === 'Completed' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}">
+											{trip.status}
+										</span>
+									</td>
+								</tr>
+							{/each}
+						{:else}
+							<tr>
+								<td colspan="9" class="px-6 py-8 text-center text-sm text-gray-500">
+									No trips found. Click "Add Trip" to get started.
+								</td>
+							</tr>
+						{/if}
+					</tbody>
+				</table>
+			</div>
+		</div>
+	</main>
+</div>
+
