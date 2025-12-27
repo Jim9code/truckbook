@@ -124,6 +124,69 @@ export const api = {
             method: 'POST',
             body: JSON.stringify(driverData)
           });
+        },
+
+        // Trips
+        getTrips: async (filters = {}) => {
+          const queryParams = new URLSearchParams();
+          if (filters.date) queryParams.append('date', filters.date);
+          if (filters.dateFrom) queryParams.append('dateFrom', filters.dateFrom);
+          if (filters.dateTo) queryParams.append('dateTo', filters.dateTo);
+          if (filters.truck) queryParams.append('truck', filters.truck);
+          if (filters.driver) queryParams.append('driver', filters.driver);
+          if (filters.status) queryParams.append('status', filters.status);
+          
+          const query = queryParams.toString();
+          return apiRequest(`/trips${query ? `?${query}` : ''}`);
+        },
+
+        getTripStats: async (filters = {}) => {
+          const queryParams = new URLSearchParams();
+          if (filters.date) queryParams.append('date', filters.date);
+          if (filters.dateFrom) queryParams.append('dateFrom', filters.dateFrom);
+          if (filters.dateTo) queryParams.append('dateTo', filters.dateTo);
+          if (filters.status) queryParams.append('status', filters.status);
+          
+          const query = queryParams.toString();
+          return apiRequest(`/trips/stats${query ? `?${query}` : ''}`);
+        },
+
+        getTrip: async (tripId) => {
+          return apiRequest(`/trips/${tripId}`);
+        },
+
+        addTrip: async (tripData) => {
+          return apiRequest('/trips', {
+            method: 'POST',
+            body: JSON.stringify(tripData)
+          });
+        },
+
+        updateTrip: async (tripId, tripData) => {
+          return apiRequest(`/trips/${tripId}`, {
+            method: 'PUT',
+            body: JSON.stringify(tripData)
+          });
+        },
+
+        deleteTrip: async (tripId) => {
+          return apiRequest(`/trips/${tripId}`, {
+            method: 'DELETE'
+          });
+        },
+
+        // Email Verification
+        verifyEmail: async (code) => {
+          return apiRequest('/auth/verify-email', {
+            method: 'POST',
+            body: JSON.stringify({ code })
+          });
+        },
+
+        resendVerificationCode: async () => {
+          return apiRequest('/auth/resend-code', {
+            method: 'POST'
+          });
         }
       };
 

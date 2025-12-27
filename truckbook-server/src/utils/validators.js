@@ -112,3 +112,100 @@ export const validateDriver = [
   handleValidationErrors
 ];
 
+// Email verification validation rules
+export const validateVerifyEmail = [
+  body('code')
+    .trim()
+    .notEmpty()
+    .withMessage('Verification code is required')
+    .isLength({ min: 5, max: 5 })
+    .withMessage('Verification code must be 5 digits')
+    .isNumeric()
+    .withMessage('Verification code must contain only numbers'),
+  
+  handleValidationErrors
+];
+
+// Trip validation rules
+export const validateTrip = [
+  body('date')
+    .notEmpty()
+    .withMessage('Trip date is required')
+    .isISO8601()
+    .withMessage('Invalid date format'),
+  
+  body('truck')
+    .trim()
+    .notEmpty()
+    .withMessage('Truck is required'),
+  
+  body('driver')
+    .trim()
+    .notEmpty()
+    .withMessage('Driver is required'),
+  
+  body('customer')
+    .trim()
+    .notEmpty()
+    .withMessage('Customer is required')
+    .isLength({ min: 2, max: 255 })
+    .withMessage('Customer name must be between 2 and 255 characters'),
+  
+  body('routeFrom')
+    .trim()
+    .notEmpty()
+    .withMessage('Route (From) is required')
+    .isLength({ min: 2, max: 255 })
+    .withMessage('Route (From) must be between 2 and 255 characters'),
+  
+  body('routeTo')
+    .trim()
+    .notEmpty()
+    .withMessage('Route (To) is required')
+    .isLength({ min: 2, max: 255 })
+    .withMessage('Route (To) must be between 2 and 255 characters'),
+  
+  body('status')
+    .optional()
+    .isIn(['Pending', 'Completed'])
+    .withMessage('Status must be either "Pending" or "Completed"'),
+  
+  body('agreedPrice')
+    .notEmpty()
+    .withMessage('Agreed price is required')
+    .isFloat({ min: 0 })
+    .withMessage('Agreed price must be a positive number'),
+  
+  body('paymentType')
+    .optional()
+    .isIn(['full', 'part'])
+    .withMessage('Payment type must be either "full" or "part"'),
+  
+  body('amountReceivedBefore')
+    .optional()
+    .isFloat({ min: 0 })
+    .withMessage('Amount received before must be a non-negative number'),
+  
+  body('amountReceivedAfter')
+    .optional()
+    .isFloat({ min: 0 })
+    .withMessage('Amount received after must be a non-negative number'),
+  
+  body('fuelCost')
+    .optional()
+    .isFloat({ min: 0 })
+    .withMessage('Fuel cost must be a non-negative number'),
+  
+  body('maintenanceCost')
+    .optional()
+    .isFloat({ min: 0 })
+    .withMessage('Maintenance cost must be a non-negative number'),
+  
+  body('otherCosts')
+    .optional()
+    .isFloat({ min: 0 })
+    .withMessage('Other costs must be a non-negative number'),
+  
+  handleValidationErrors
+];
+

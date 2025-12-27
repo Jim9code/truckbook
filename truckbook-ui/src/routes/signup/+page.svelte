@@ -69,8 +69,8 @@
 				// Store token
 				setToken(response.data.token);
 				
-				// Redirect to subscription page
-				goto('/subscription');
+				// Redirect to email verification page
+				goto(`/verify-email?email=${encodeURIComponent(email)}`);
 			}
 		} catch (error) {
 			console.error('Signup error:', error);

@@ -21,17 +21,46 @@
 	async function loadTrucks() {
 		try {
 			isLoading = true;
-			const response = await api.getTrucks(searchQuery);
+			const trucksResponse = await api.getTrucks(searchQuery);
 			
-			if (response.success) {
-				// Add placeholder stats (will be calculated from trips in Phase 3)
-				trucks = response.data.map(truck => ({
-					...truck,
-					totalTrips: 0,
-					totalRevenue: 0,
-					totalCost: 0,
-					netProfit: 0
-				}));
+			if (trucksResponse.success) {
+				// Load all trips to calculate stats
+				const tripsResponse = await api.getTrips();
+				
+				if (tripsResponse.success) {
+					const allTrips = tripsResponse.data;
+					
+					// Calculate stats for each truck
+					trucks = trucksResponse.data.map(truck => {
+						const truckFormat = `${truck.name} #${truck.plateNumber}`;
+						const truckTrips = allTrips.filter(trip => trip.truck === truckFormat);
+						
+						const totalTrips = truckTrips.length;
+						const totalRevenue = truckTrips.reduce((sum, trip) => sum + parseFloat(trip.agreedPrice || 0), 0);
+						const totalCost = truckTrips.reduce((sum, trip) => sum + parseFloat(trip.totalCost || 0), 0);
+						const netProfit = truckTrips.reduce((sum, trip) => {
+							const profit = parseFloat(trip.totalReceived || 0) - parseFloat(trip.totalCost || 0);
+							return sum + profit;
+						}, 0);
+						
+						return {
+							...truck,
+							totalTrips,
+							totalRevenue,
+							totalCost,
+							netProfit
+						};
+					});
+				} else {
+					// If trips fail to load, show trucks with zero stats
+					trucks = trucksResponse.data.map(truck => ({
+						...truck,
+						totalTrips: 0,
+						totalRevenue: 0,
+						totalCost: 0,
+						netProfit: 0
+					}));
+				}
 			}
 		} catch (error) {
 			console.error('Error loading trucks:', error);
@@ -179,7 +208,7 @@
 					<a href="/outstanding-payments" class="text-gray-700 hover:text-gray-900">Outstanding Payments</a>
 					<button
 						on:click={handleLogout}
-						class="text-gray-700 hover:text-gray-900"
+						class="bg-red-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-red-700 transition-colors"
 					>
 						Logout
 					</button>

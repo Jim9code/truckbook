@@ -128,31 +128,37 @@
 		}
 	});
 
-	function loadTripData(id) {
-		// TODO: Replace with API call
-		const trip = sampleTrips.find(t => t.id === id);
-		if (trip) {
-			tripDate = trip.date;
-			selectedTruck = trip.truck;
-			selectedDriver = trip.driver;
-			selectedCustomer = trip.customer;
-			routeFrom = trip.routeFrom;
-			routeTo = trip.routeTo;
-			status = trip.status;
-			agreedPrice = trip.agreedPrice;
-			paymentType = trip.paymentType;
-			amountReceivedBefore = trip.amountReceivedBefore;
-			amountReceivedAfter = trip.amountReceivedAfter;
-			fuelCost = trip.fuelCost;
-			maintenanceCost = trip.maintenanceCost;
-			otherCosts = trip.otherCosts;
-			notes = trip.notes || '';
+	async function loadTripData(id) {
+		try {
+			const response = await api.getTrip(id);
+			if (response.success && response.data) {
+				const trip = response.data;
+				tripDate = trip.date;
+				selectedTruck = trip.truck;
+				selectedDriver = trip.driver;
+				selectedCustomer = trip.customer;
+				routeFrom = trip.routeFrom;
+				routeTo = trip.routeTo;
+				status = trip.status;
+				agreedPrice = parseFloat(trip.agreedPrice) || 0;
+				paymentType = trip.paymentType;
+				amountReceivedBefore = parseFloat(trip.amountReceivedBefore) || 0;
+				amountReceivedAfter = parseFloat(trip.amountReceivedAfter) || 0;
+				fuelCost = parseFloat(trip.fuelCost) || 0;
+				maintenanceCost = parseFloat(trip.maintenanceCost) || 0;
+				otherCosts = parseFloat(trip.otherCosts) || 0;
+				notes = trip.notes || '';
+			}
+		} catch (error) {
+			console.error('Error loading trip:', error);
+			alert('Error loading trip data. Please try again.');
+			goto('/trips');
 		}
 	}
 
 	// Auto-calculated values (read-only, updates live)
-	$: totalCost = (fuelCost || 0) + (maintenanceCost || 0) + (otherCosts || 0);
-	$: totalReceived = (amountReceivedBefore || 0) + (amountReceivedAfter || 0);
+	$: totalCost = (parseFloat(fuelCost) || 0) + (parseFloat(maintenanceCost) || 0) + (parseFloat(otherCosts) || 0);
+	$: totalReceived = (parseFloat(amountReceivedBefore) || 0) + (parseFloat(amountReceivedAfter) || 0);
 	$: netProfitLoss = totalReceived - totalCost;
 
 	// Format currency
@@ -224,29 +230,26 @@
 			notes
 		};
 
-		// TODO: Add API call to save/update trip
+		// Save/update trip via API
 		try {
+			let response;
 			if (isEditMode && tripId) {
 				// Update existing trip
-				// const response = await fetch(`/api/trips/${tripId}`, {
-				// 	method: 'PUT',
-				// 	headers: { 'Content-Type': 'application/json' },
-				// 	body: JSON.stringify(tripData)
-				// });
+				response = await api.updateTrip(tripId, tripData);
 			} else {
 				// Create new trip
-				// const response = await fetch('/api/trips', {
-				// 	method: 'POST',
-				// 	headers: { 'Content-Type': 'application/json' },
-				// 	body: JSON.stringify(tripData)
-				// });
+				response = await api.addTrip(tripData);
 			}
 			
-			// Redirect to trips dashboard
-			goto('/trips');
+			if (response.success) {
+				// Redirect to trips dashboard
+				goto('/trips');
+			} else {
+				alert(response.message || 'Error saving trip. Please try again.');
+			}
 		} catch (error) {
 			console.error('Error saving trip:', error);
-			alert('Error saving trip. Please try again.');
+			alert(error.message || 'Error saving trip. Please try again.');
 		}
 	}
 

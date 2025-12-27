@@ -47,12 +47,16 @@ export const createUser = async (userData) => {
     companyName: userData.companyName,
     fullName: userData.fullName,
     email: userData.email,
-    password: hashedPassword
+    password: hashedPassword,
+    verificationCode: userData.verificationCode || null,
+    isEmailVerified: false,
+    codeExpiresAt: userData.codeExpiresAt || null
   });
 
-  // Remove password from response
+  // Remove password and verification code from response
   const userResponse = user.toJSON();
   delete userResponse.password;
+  delete userResponse.verificationCode;
 
   return userResponse;
 };

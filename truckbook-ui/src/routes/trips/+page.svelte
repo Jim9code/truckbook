@@ -4,94 +4,123 @@
 	import { onMount } from 'svelte';
 	import SkeletonCard from '$lib/components/SkeletonCard.svelte';
 	import SkeletonTableRow from '$lib/components/SkeletonTableRow.svelte';
+	import { api } from '$lib/api.js';
 
 	// Loading state
 	let isLoading = true;
+	let isLoadingStats = true;
 
-	// Sample data - will be replaced with API calls
-	let trips = [
-		{
-			id: 1,
-			date: '2024-01-24',
-			truck: 'Volvo VNL 860 #402',
-			driver: 'Mike Ross',
-			customer: 'Walmart Logistics',
-			routeFrom: 'Dallas, TX',
-			routeTo: 'Houston, TX',
-			agreedPrice: 1200.00,
-			totalCost: 450.00,
-			totalReceived: 1200.00,
-			status: 'Completed'
-		},
-		{
-			id: 2,
-			date: '2024-01-23',
-			truck: 'Freightliner #305',
-			driver: 'John Doe',
-			customer: 'Amazon Freight',
-			routeFrom: 'Seattle, WA',
-			routeTo: 'Portland, OR',
-			agreedPrice: 950.00,
-			totalCost: 300.00,
-			totalReceived: 950.00,
-			status: 'Completed'
-		},
-		{
-			id: 3,
-			date: '2024-01-21',
-			truck: 'Kenworth T680 #118',
-			driver: 'Sarah Smith',
-			customer: 'Target Corp',
-			routeFrom: 'Miami, FL',
-			routeTo: 'Orlando, FL',
-			agreedPrice: 800.00,
-			totalCost: 950.00,
-			totalReceived: 500.00,
-			status: 'Pending'
-		}
-	];
+	// User/Company data
+	let companyName = '';
+
+	// Trips data from API
+	let trips = [];
+	let stats = {
+		totalRevenue: 0,
+		totalProfit: 0,
+		activeTrips: 0,
+		completedTrips: 0,
+		totalTrips: 0
+	};
 
 	// Filters
-	let dateRange = '';
+	let dateFrom = '';
+	let dateTo = '';
 	let selectedTruck = '';
 	let selectedDriver = '';
 	let selectedStatus = '';
 
+	// Load trips from API
+	async function loadTrips() {
+		try {
+			isLoading = true;
+			const filters = {};
+			
+			if (dateFrom) {
+				filters.dateFrom = dateFrom;
+			}
+			if (dateTo) {
+				filters.dateTo = dateTo;
+			}
+			if (selectedTruck) {
+				filters.truck = selectedTruck;
+			}
+			if (selectedDriver) {
+				filters.driver = selectedDriver;
+			}
+			if (selectedStatus) {
+				filters.status = selectedStatus;
+			}
+
+			const response = await api.getTrips(filters);
+			if (response.success) {
+				trips = response.data;
+			}
+		} catch (error) {
+			console.error('Error loading trips:', error);
+			trips = [];
+		} finally {
+			isLoading = false;
+		}
+	}
+
+	// Load statistics
+	async function loadStats() {
+		try {
+			isLoadingStats = true;
+			const filters = {};
+			
+			if (dateFrom) {
+				filters.dateFrom = dateFrom;
+			}
+			if (dateTo) {
+				filters.dateTo = dateTo;
+			}
+			if (selectedStatus) {
+				filters.status = selectedStatus;
+			}
+
+			const response = await api.getTripStats(filters);
+			if (response.success) {
+				stats = response.data;
+			}
+		} catch (error) {
+			console.error('Error loading stats:', error);
+		} finally {
+			isLoadingStats = false;
+		}
+	}
+
+	// Load user data to get company name
+	async function loadUserData() {
+		try {
+			const response = await api.getMe();
+			if (response.success && response.data.user) {
+				companyName = response.data.user.companyName;
+			}
+		} catch (error) {
+			console.error('Error loading user data:', error);
+		}
+	}
+
 	// Read truck filter from URL on mount
 	onMount(async () => {
-		// Simulate API call delay
-		await new Promise(resolve => setTimeout(resolve, 800));
-		
 		const truckParam = $page.url.searchParams.get('truck');
 		if (truckParam) {
-			// Find exact or partial matching truck in the list
-			const matchingTruck = trucks.find(t => t === truckParam || t.includes(truckParam));
-			if (matchingTruck) {
-				selectedTruck = matchingTruck;
-			} else {
-				// If no exact match, try to find by truck name or plate
-				const decodedParam = decodeURIComponent(truckParam);
-				const matchingTruck2 = trucks.find(t => t.toLowerCase().includes(decodedParam.toLowerCase()));
-				if (matchingTruck2) {
-					selectedTruck = matchingTruck2;
-				}
-			}
+			selectedTruck = decodeURIComponent(truckParam);
 		}
 		
-		isLoading = false;
+		await Promise.all([loadTrips(), loadStats(), loadUserData()]);
 	});
 
-	// Summary calculations
-	$: totalRevenue = trips.reduce((sum, trip) => sum + trip.totalReceived, 0);
-	$: totalProfit = trips.reduce((sum, trip) => {
-		const profit = trip.totalReceived - trip.totalCost;
-		return sum + profit;
-	}, 0);
-	$: activeTrips = trips.filter(trip => trip.status === 'Pending').length;
+	// Summary calculations (use stats from API)
+	$: totalRevenue = stats.totalRevenue || 0;
+	$: totalProfit = stats.totalProfit || 0;
+	$: activeTrips = stats.activeTrips || 0;
 
 	// Calculate profit/loss for a trip
 	function calculateProfit(trip) {
-		return trip.totalReceived - trip.totalCost;
+		return parseFloat(trip.totalReceived || 0) - parseFloat(trip.totalCost || 0);
 	}
 
 	// Format currency (using ₦ for Naira as per plan)
@@ -118,19 +147,19 @@
 	$: drivers = [...new Set(trips.map(t => t.driver))];
 	$: statuses = ['Pending', 'Completed'];
 
-	// Filter trips
+	// Handle filter changes - reload trips and stats
+	function handleFilterChange() {
+		loadTrips();
+		loadStats();
+	}
+
+	// Filter trips (client-side filtering for truck, driver, status - date filtering handled by API)
 	$: filteredTrips = trips.filter(trip => {
 		if (selectedTruck && trip.truck !== selectedTruck) return false;
 		if (selectedDriver && trip.driver !== selectedDriver) return false;
 		if (selectedStatus && trip.status !== selectedStatus) return false;
 		
-		// Date filtering - filter by exact date match
-		if (dateRange) {
-			const tripDate = new Date(trip.date);
-			const filterDate = new Date(dateRange);
-			// Compare dates (ignore time)
-			if (tripDate.toDateString() !== filterDate.toDateString()) return false;
-		}
+		// Date filtering is now handled by the API
 		
 		return true;
 	});
@@ -164,7 +193,7 @@
 					<a href="/outstanding-payments" class="text-gray-700 hover:text-gray-900">Outstanding Payments</a>
 					<button
 						on:click={handleLogout}
-						class="text-gray-700 hover:text-gray-900"
+						class="bg-red-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-red-700 transition-colors"
 					>
 						Logout
 					</button>
@@ -178,20 +207,32 @@
 		<!-- Header -->
 		<div class="flex justify-between items-center mb-8">
 			<div>
-				<h1 class="text-3xl font-bold text-gray-900 mb-2">Trips Dashboard</h1>
+				<h1 class="text-3xl font-bold text-gray-900 mb-2">
+					{companyName ? `${companyName} Trips Dashboard` : 'Trips Dashboard'}
+				</h1>
 				<p class="text-gray-600">Overview of all scheduled and completed hauls.</p>
 			</div>
-			<button
-				on:click={() => goto('/trips/add')}
-				class="bg-blue-600 text-white px-6 py-2.5 rounded-lg font-medium hover:bg-blue-700 transition-colors"
-			>
-				+ Add Trip
-			</button>
+			<div class="flex gap-3">
+				<button
+					class="px-4 py-2 border border-gray-300 rounded-lg font-medium text-gray-700 hover:bg-gray-50 transition-colors flex items-center gap-2"
+				>
+					<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+					</svg>
+					Export Report
+				</button>
+				<button
+					on:click={() => goto('/trips/add')}
+					class="bg-blue-600 text-white px-6 py-2.5 rounded-lg font-medium hover:bg-blue-700 transition-colors"
+				>
+					+ Add Trip
+				</button>
+			</div>
 		</div>
 
 		<!-- Summary Cards -->
 		<div class="grid md:grid-cols-3 gap-6 mb-8">
-			{#if isLoading}
+			{#if isLoadingStats}
 				<SkeletonCard />
 				<SkeletonCard />
 				<SkeletonCard />
@@ -230,13 +271,24 @@
 
 		<!-- Filters -->
 		<div class="bg-white rounded-lg border border-gray-200 p-4 mb-6">
-			<div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+			<div class="grid grid-cols-1 md:grid-cols-5 gap-4">
 				<div>
-					<label for="dateRange" class="block text-sm font-medium text-gray-700 mb-1">Date Range</label>
+					<label for="dateFrom" class="block text-sm font-medium text-gray-700 mb-1">Date From</label>
 					<input
 						type="date"
-						id="dateRange"
-						bind:value={dateRange}
+						id="dateFrom"
+						bind:value={dateFrom}
+						on:change={handleFilterChange}
+						class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none text-sm"
+					/>
+				</div>
+				<div>
+					<label for="dateTo" class="block text-sm font-medium text-gray-700 mb-1">Date To</label>
+					<input
+						type="date"
+						id="dateTo"
+						bind:value={dateTo}
+						on:change={handleFilterChange}
 						class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none text-sm"
 					/>
 				</div>
@@ -245,6 +297,7 @@
 					<select
 						id="truck"
 						bind:value={selectedTruck}
+						on:change={handleFilterChange}
 						class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none text-sm"
 					>
 						<option value="">All Trucks</option>
@@ -258,6 +311,7 @@
 					<select
 						id="driver"
 						bind:value={selectedDriver}
+						on:change={handleFilterChange}
 						class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none text-sm"
 					>
 						<option value="">All Drivers</option>
@@ -271,6 +325,7 @@
 					<select
 						id="status"
 						bind:value={selectedStatus}
+						on:change={handleFilterChange}
 						class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none text-sm"
 					>
 						<option value="">All Status</option>

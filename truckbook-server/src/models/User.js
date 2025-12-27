@@ -28,6 +28,21 @@ export default (sequelize) => {
     password: {
       type: DataTypes.STRING(255),
       allowNull: false
+    },
+    verificationCode: {
+      type: DataTypes.STRING(5),
+      allowNull: true,
+      field: 'verification_code'
+    },
+    isEmailVerified: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false,
+      field: 'is_email_verified'
+    },
+    codeExpiresAt: {
+      type: DataTypes.DATE,
+      allowNull: true,
+      field: 'code_expires_at'
     }
   }, {
     tableName: 'users',

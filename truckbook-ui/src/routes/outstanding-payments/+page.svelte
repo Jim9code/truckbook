@@ -3,70 +3,78 @@
 	import { onMount } from 'svelte';
 	import SkeletonCard from '$lib/components/SkeletonCard.svelte';
 	import SkeletonTableRow from '$lib/components/SkeletonTableRow.svelte';
+	import { api } from '$lib/api.js';
 
 	// Loading state
 	let isLoading = true;
 
-	// Sample data - will be replaced with API calls
-	let payments = [
-		{
-			id: 1,
-			customer: 'North Star Logistics',
-			customerInitials: 'NL',
-			tripRef: '#TRK-2023-64',
-			agreedPrice: 5000.00,
-			amountPaid: 0.00,
-			balanceOwed: 5000.00,
-			daysOutstanding: 61
-		},
-		{
-			id: 2,
-			customer: 'Acme Logistics',
-			customerInitials: 'AL',
-			tripRef: '#TRK-2023-88',
-			agreedPrice: 2500.00,
-			amountPaid: 1000.00,
-			balanceOwed: 1500.00,
-			daysOutstanding: 45
-		},
-		{
-			id: 3,
-			customer: 'FastTrack Shipping',
-			customerInitials: 'FS',
-			tripRef: '#TRK-2023-75',
-			agreedPrice: 1800.00,
-			amountPaid: 500.00,
-			balanceOwed: 1300.00,
-			daysOutstanding: 32
-		},
-		{
-			id: 4,
-			customer: 'Global Freight Inc.',
-			customerInitials: 'GF',
-			tripRef: '#TRK-2023-92',
-			agreedPrice: 4200.00,
-			amountPaid: 0.00,
-			balanceOwed: 4200.00,
-			daysOutstanding: 12
-		},
-		{
-			id: 5,
-			customer: 'River Valley Transport',
-			customerInitials: 'RV',
-			tripRef: '#TRK-2023-81',
-			agreedPrice: 3100.00,
-			amountPaid: 2000.00,
-			balanceOwed: 1100.00,
-			daysOutstanding: 5
-		}
-	];
-
+	// Payments data calculated from trips
+	let payments = [];
 	let searchQuery = '';
 
+	// Load outstanding payments from trips
+	async function loadOutstandingPayments() {
+		try {
+			isLoading = true;
+			const response = await api.getTrips();
+			
+			if (response.success) {
+				const allTrips = response.data;
+				const today = new Date();
+				today.setHours(0, 0, 0, 0);
+				
+				// Filter trips with outstanding balance and calculate payment info
+				payments = allTrips
+					.filter(trip => {
+						const agreedPrice = parseFloat(trip.agreedPrice || 0);
+						const totalReceived = parseFloat(trip.totalReceived || 0);
+						return totalReceived < agreedPrice;
+					})
+					.map(trip => {
+						const agreedPrice = parseFloat(trip.agreedPrice || 0);
+						const totalReceived = parseFloat(trip.totalReceived || 0);
+						const balanceOwed = agreedPrice - totalReceived;
+						
+						// Calculate days outstanding
+						const tripDate = new Date(trip.date);
+						tripDate.setHours(0, 0, 0, 0);
+						const daysOutstanding = Math.floor((today - tripDate) / (1000 * 60 * 60 * 24));
+						
+						// Get customer initials
+						const customerName = trip.customer || '';
+						const initials = customerName
+							.split(' ')
+							.map(word => word[0])
+							.join('')
+							.toUpperCase()
+							.substring(0, 2);
+						
+						// Format trip reference
+						const tripRef = `#TRK-${trip.id}`;
+						
+						return {
+							id: trip.id,
+							customer: customerName,
+							customerInitials: initials,
+							tripRef,
+							agreedPrice,
+							amountPaid: totalReceived,
+							balanceOwed,
+							daysOutstanding: Math.max(0, daysOutstanding)
+						};
+					})
+					.sort((a, b) => b.daysOutstanding - a.daysOutstanding); // Sort by days outstanding (highest first)
+			}
+		} catch (error) {
+			console.error('Error loading outstanding payments:', error);
+			payments = [];
+		} finally {
+			isLoading = false;
+		}
+	}
+
 	onMount(async () => {
-		// Simulate API call delay
-		await new Promise(resolve => setTimeout(resolve, 800));
-		isLoading = false;
+		await loadOutstandingPayments();
 	});
 
 	// Calculate totals
@@ -135,7 +143,7 @@
 					<a href="/outstanding-payments" class="text-blue-600 font-medium border-b-2 border-blue-600 pb-1">Outstanding Payments</a>
 					<button
 						on:click={handleLogout}
-						class="text-gray-700 hover:text-gray-900"
+						class="bg-red-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-red-700 transition-colors"
 					>
 						Logout
 					</button>
@@ -151,20 +159,6 @@
 			<div>
 				<h1 class="text-3xl font-bold text-gray-900 mb-2">Outstanding Payments</h1>
 				<p class="text-gray-600">Track and manage unpaid balances across all customer accounts.</p>
-			</div>
-			<div class="flex gap-3">
-				<button class="px-4 py-2 border border-gray-300 rounded-lg font-medium text-gray-700 hover:bg-gray-50 transition-colors flex items-center gap-2">
-					<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-					</svg>
-					Export Report
-				</button>
-				<button class="px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors flex items-center gap-2">
-					<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
-					</svg>
-					Send Reminders
-				</button>
 			</div>
 		</div>
 
