@@ -187,6 +187,24 @@ export const api = {
           return apiRequest('/auth/resend-code', {
             method: 'POST'
           });
+        },
+
+        // Maintenance Records
+        getTruckMaintenance: async (truckId) => {
+          return apiRequest(`/trucks/${truckId}/maintenance`);
+        },
+
+        addMaintenanceRecord: async (truckId, maintenanceData) => {
+          return apiRequest(`/trucks/${truckId}/maintenance`, {
+            method: 'POST',
+            body: JSON.stringify(maintenanceData)
+          });
+        },
+
+        deleteMaintenanceRecord: async (truckId, maintenanceId) => {
+          return apiRequest(`/trucks/${truckId}/maintenance/${maintenanceId}`, {
+            method: 'DELETE'
+          });
         }
       };
 

@@ -24,7 +24,6 @@
 	let amountReceivedAfter = 0;
 	
 	let fuelCost = 0;
-	let maintenanceCost = 0;
 	let otherCosts = 0;
 	
 	let notes = '';
@@ -145,7 +144,6 @@
 				amountReceivedBefore = parseFloat(trip.amountReceivedBefore) || 0;
 				amountReceivedAfter = parseFloat(trip.amountReceivedAfter) || 0;
 				fuelCost = parseFloat(trip.fuelCost) || 0;
-				maintenanceCost = parseFloat(trip.maintenanceCost) || 0;
 				otherCosts = parseFloat(trip.otherCosts) || 0;
 				notes = trip.notes || '';
 			}
@@ -157,7 +155,7 @@
 	}
 
 	// Auto-calculated values (read-only, updates live)
-	$: totalCost = (parseFloat(fuelCost) || 0) + (parseFloat(maintenanceCost) || 0) + (parseFloat(otherCosts) || 0);
+	$: totalCost = (parseFloat(fuelCost) || 0) + (parseFloat(otherCosts) || 0);
 	$: totalReceived = (parseFloat(amountReceivedBefore) || 0) + (parseFloat(amountReceivedAfter) || 0);
 	$: netProfitLoss = totalReceived - totalCost;
 
@@ -200,10 +198,9 @@
 
 		// Validate that costs are non-negative
 		const validatedFuelCost = formatNumber(fuelCost);
-		const validatedMaintenanceCost = formatNumber(maintenanceCost);
 		const validatedOtherCosts = formatNumber(otherCosts);
 		
-		if (validatedFuelCost < 0 || validatedMaintenanceCost < 0 || validatedOtherCosts < 0) {
+		if (validatedFuelCost < 0 || validatedOtherCosts < 0) {
 			alert('Costs cannot be negative');
 			return;
 		}
@@ -223,7 +220,6 @@
 			amountReceivedBefore: formatNumber(amountReceivedBefore),
 			amountReceivedAfter: formatNumber(amountReceivedAfter),
 			fuelCost: validatedFuelCost,
-			maintenanceCost: validatedMaintenanceCost,
 			otherCosts: validatedOtherCosts,
 			totalCost,
 			totalReceived,
@@ -593,23 +589,8 @@
 						</div>
 
 						<div>
-							<label for="maintenanceCost" class="block text-sm font-medium text-gray-700 mb-1">
-								Maintenance / Repair Cost
-							</label>
-							<input
-								type="number"
-								id="maintenanceCost"
-								bind:value={maintenanceCost}
-								min="0"
-								step="0.01"
-								placeholder="0.00"
-								class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
-							/>
-						</div>
-
-						<div>
 							<label for="otherCosts" class="block text-sm font-medium text-gray-700 mb-1">
-								Other Costs (optional)
+								Driver Pay <span class="text-gray-500 text-xs font-normal">(optional)</span>
 							</label>
 							<input
 								type="number"

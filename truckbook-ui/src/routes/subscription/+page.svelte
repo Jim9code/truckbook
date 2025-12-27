@@ -68,7 +68,7 @@
 			<div class="bg-white rounded-lg border-2 border-gray-200 p-8 relative">
 				<div class="mb-6">
 					<h2 class="text-2xl font-bold text-gray-900 mb-2">Starter</h2>
-					<p class="text-gray-600">Perfect for small fleets just getting started with digital records.</p>
+					<p class="text-gray-600 text-sm">For small operators managing a few trucks who want clear profit tracking and basic records.</p>
 				</div>
 				
 				<div class="mb-6">
@@ -78,38 +78,84 @@
 					</div>
 				</div>
 
-				<ul class="space-y-3 mb-8">
+				<div class="mb-4">
+					<p class="text-sm font-semibold text-gray-900 mb-3">FEATURES</p>
+				</div>
+
+				<ul class="space-y-2.5 mb-6">
 					<li class="flex items-start">
-						<svg class="w-6 h-6 text-blue-600 mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+						<svg class="w-5 h-5 text-blue-600 mr-2 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
 						</svg>
-						<span class="text-gray-700">Unlimited trips</span>
+						<span class="text-gray-700 text-sm">Up to 5 trucks</span>
 					</li>
 					<li class="flex items-start">
-						<svg class="w-6 h-6 text-blue-600 mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+						<svg class="w-5 h-5 text-blue-600 mr-2 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
 						</svg>
-						<span class="text-gray-700">Profit per trip calculation</span>
+						<span class="text-gray-700 text-sm">Unlimited trips</span>
 					</li>
 					<li class="flex items-start">
-						<svg class="w-6 h-6 text-blue-600 mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+						<svg class="w-5 h-5 text-blue-600 mr-2 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
 						</svg>
-						<span class="text-gray-700">Outstanding payment tracking</span>
+						<span class="text-gray-700 text-sm">Profit & loss per trip</span>
 					</li>
 					<li class="flex items-start">
-						<svg class="w-6 h-6 text-blue-600 mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+						<svg class="w-5 h-5 text-blue-600 mr-2 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
 						</svg>
-						<span class="text-gray-700">Truck performance insights</span>
+						<span class="text-gray-700 text-sm">Outstanding customer payment tracking</span>
 					</li>
 					<li class="flex items-start">
-						<svg class="w-6 h-6 text-blue-600 mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+						<svg class="w-5 h-5 text-blue-600 mr-2 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
 						</svg>
-						<span class="text-gray-700">Basic records</span>
+						<span class="text-gray-700 text-sm">Basic maintenance records</span>
+					</li>
+					<li class="flex items-start">
+						<svg class="w-5 h-5 text-blue-600 mr-2 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+						</svg>
+						<span class="text-gray-700 text-sm">Split payments supported (advance + balance)</span>
+					</li>
+					<li class="flex items-start">
+						<svg class="w-5 h-5 text-blue-600 mr-2 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+						</svg>
+						<span class="text-gray-700 text-sm">Single user (owner only)</span>
+					</li>
+					<li class="flex items-start">
+						<svg class="w-5 h-5 text-blue-600 mr-2 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+						</svg>
+						<span class="text-gray-700 text-sm">Basic reports (Total revenue, expenses, profit)</span>
 					</li>
 				</ul>
+
+				<div class="mb-6 pt-4 border-t border-gray-200">
+					<p class="text-xs font-semibold text-gray-500 mb-2">LIMITATIONS</p>
+					<ul class="space-y-1.5">
+						<li class="flex items-start">
+							<svg class="w-4 h-4 text-gray-400 mr-2 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+							</svg>
+							<span class="text-gray-500 text-xs">No staff access</span>
+						</li>
+						<li class="flex items-start">
+							<svg class="w-4 h-4 text-gray-400 mr-2 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+							</svg>
+							<span class="text-gray-500 text-xs">No advanced breakdowns</span>
+						</li>
+						<li class="flex items-start">
+							<svg class="w-4 h-4 text-gray-400 mr-2 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+							</svg>
+							<span class="text-gray-500 text-xs">Limited historical data (recent months only)</span>
+						</li>
+					</ul>
+				</div>
 
 				<button
 					on:click={() => handleSubscribe('starter')}
@@ -131,7 +177,7 @@
 
 				<div class="mb-6">
 					<h2 class="text-2xl font-bold text-gray-900 mb-2">Large Fleet</h2>
-					<p class="text-gray-600">For growing & large fleets needing more control and priority.</p>
+					<p class="text-gray-600 text-sm">For growing logistics businesses that need control, accountability, and deeper insights across multiple trucks and staff.</p>
 				</div>
 				
 				<div class="mb-6">
@@ -142,29 +188,78 @@
 				</div>
 
 				<div class="mb-4">
-					<p class="text-sm font-semibold text-gray-900 mb-3">EVERYTHING IN STARTER, PLUS</p>
+					<p class="text-sm font-semibold text-gray-900 mb-3">FEATURES</p>
 				</div>
 
-				<ul class="space-y-3 mb-8">
+				<ul class="space-y-2.5 mb-6">
 					<li class="flex items-start">
-						<svg class="w-6 h-6 text-blue-600 mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+						<svg class="w-5 h-5 text-blue-600 mr-2 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
 						</svg>
-						<span class="text-gray-700">Priority support</span>
+						<span class="text-gray-700 text-sm">Unlimited trucks</span>
 					</li>
 					<li class="flex items-start">
-						<svg class="w-6 h-6 text-blue-600 mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+						<svg class="w-5 h-5 text-blue-600 mr-2 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
 						</svg>
-						<span class="text-gray-700">Higher limits on data export</span>
+						<span class="text-gray-700 text-sm">Unlimited drivers & customers</span>
 					</li>
 					<li class="flex items-start">
-						<svg class="w-6 h-6 text-blue-600 mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+						<svg class="w-5 h-5 text-blue-600 mr-2 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
 						</svg>
-						<span class="text-gray-700">Early access to future advanced features</span>
+						<span class="text-gray-700 text-sm">Advanced profit breakdown (per truck, driver, customer, route)</span>
+					</li>
+					<li class="flex items-start">
+						<svg class="w-5 h-5 text-blue-600 mr-2 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+						</svg>
+						<span class="text-gray-700 text-sm">Full maintenance history per truck</span>
+					</li>
+					<li class="flex items-start">
+						<svg class="w-5 h-5 text-blue-600 mr-2 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+						</svg>
+						<span class="text-gray-700 text-sm">Cost trends & high-maintenance truck visibility</span>
+					</li>
+					<li class="flex items-start">
+						<svg class="w-5 h-5 text-blue-600 mr-2 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+						</svg>
+						<span class="text-gray-700 text-sm">Advanced reports</span>
+					</li>
+					<li class="flex items-start">
+						<svg class="w-5 h-5 text-blue-600 mr-2 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+						</svg>
+						<span class="text-gray-700 text-sm">Export reports (Excel / PDF)</span>
+					</li>
+					<li class="flex items-start">
+						<svg class="w-5 h-5 text-blue-600 mr-2 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+						</svg>
+						<span class="text-gray-700 text-sm">Full historical records (no limit)</span>
 					</li>
 				</ul>
+
+				<!-- Coming Soon Section -->
+				<div class="mb-6 pt-4 border-t border-gray-200">
+					<p class="text-xs font-semibold text-blue-600 mb-2">COMING SOON</p>
+					<ul class="space-y-1.5">
+						<li class="flex items-start">
+							<svg class="w-4 h-4 text-blue-400 mr-2 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+							</svg>
+							<span class="text-gray-600 text-xs">Multiple users (Owner, Accountant, Operations staff)</span>
+						</li>
+						<li class="flex items-start">
+							<svg class="w-4 h-4 text-blue-400 mr-2 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+							</svg>
+							<span class="text-gray-600 text-xs">Role-based access (view / add / edit)</span>
+						</li>
+					</ul>
+				</div>
 
 				<button
 					on:click={() => handleSubscribe('large-fleet')}

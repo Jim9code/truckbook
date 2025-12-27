@@ -16,6 +16,21 @@
 	let errors = {};
 	let isLoading = true;
 	let isSavingTruck = false;
+	
+	// Maintenance records
+	let maintenanceRecords = [];
+	let isLoadingMaintenance = false;
+	let showMaintenanceForm = false;
+	let maintenanceDescription = '';
+	let maintenanceAmount = '';
+	let maintenanceDate = new Date().toISOString().split('T')[0];
+	let isAddingMaintenance = false;
+	
+	// Confirmation modal state
+	let showConfirmModal = false;
+	let confirmAction = null;
+	let confirmMessage = '';
+	let confirmTitle = '';
 
 	// Load trucks from API
 	async function loadTrucks() {
@@ -30,27 +45,44 @@
 				if (tripsResponse.success) {
 					const allTrips = tripsResponse.data;
 					
-					// Calculate stats for each truck
-					trucks = trucksResponse.data.map(truck => {
+					// Calculate stats for each truck (including maintenance costs)
+					trucks = await Promise.all(trucksResponse.data.map(async (truck) => {
 						const truckFormat = `${truck.name} #${truck.plateNumber}`;
 						const truckTrips = allTrips.filter(trip => trip.truck === truckFormat);
 						
 						const totalTrips = truckTrips.length;
 						const totalRevenue = truckTrips.reduce((sum, trip) => sum + parseFloat(trip.agreedPrice || 0), 0);
 						const totalCost = truckTrips.reduce((sum, trip) => sum + parseFloat(trip.totalCost || 0), 0);
-						const netProfit = truckTrips.reduce((sum, trip) => {
+						const tripProfit = truckTrips.reduce((sum, trip) => {
 							const profit = parseFloat(trip.totalReceived || 0) - parseFloat(trip.totalCost || 0);
 							return sum + profit;
 						}, 0);
+						
+						// Get maintenance records for this truck
+						let maintenanceTotal = 0;
+						try {
+							const maintenanceResponse = await api.getTruckMaintenance(truck.id);
+							if (maintenanceResponse.success) {
+								maintenanceTotal = maintenanceResponse.data.reduce((sum, record) => 
+									sum + parseFloat(record.amount || 0), 0
+								);
+							}
+						} catch (error) {
+							console.error(`Error loading maintenance for truck ${truck.id}:`, error);
+						}
+						
+						// Net profit = Trip profit - Maintenance costs
+						const netProfit = tripProfit - maintenanceTotal;
 						
 						return {
 							...truck,
 							totalTrips,
 							totalRevenue,
 							totalCost,
-							netProfit
+							netProfit,
+							maintenanceTotal
 						};
-					});
+					}));
 				} else {
 					// If trips fail to load, show trucks with zero stats
 					trucks = trucksResponse.data.map(truck => ({
@@ -58,7 +90,8 @@
 						totalTrips: 0,
 						totalRevenue: 0,
 						totalCost: 0,
-						netProfit: 0
+						netProfit: 0,
+						maintenanceTotal: 0
 					}));
 				}
 			}
@@ -99,14 +132,127 @@
 		}).format(amount);
 	}
 
-	function handleTruckClick(truck) {
+	async function handleTruckClick(truck) {
 		// Open edit modal for the truck
 		editingTruck = truck;
 		truckName = truck.name;
 		plateNumber = truck.plateNumber;
-		driverName = ''; // We don't store driver name on truck, so leave empty
+		
+		// Get driver name from most recent trip for this truck
+		driverName = '';
+		try {
+			const truckFormat = `${truck.name} #${truck.plateNumber}`;
+			const tripsResponse = await api.getTrips({ truck: truckFormat });
+			if (tripsResponse.success && tripsResponse.data.length > 0) {
+				// Get the most recent trip's driver
+				const mostRecentTrip = tripsResponse.data.sort((a, b) => 
+					new Date(b.date) - new Date(a.date)
+				)[0];
+				driverName = mostRecentTrip.driver || '';
+			}
+		} catch (error) {
+			console.error('Error loading driver for truck:', error);
+		}
+		
 		showAddTruckModal = true;
 		errors = {};
+		
+		// Load maintenance records for this truck
+		await loadMaintenanceRecords(truck.id);
+	}
+	
+	async function loadMaintenanceRecords(truckId) {
+		try {
+			isLoadingMaintenance = true;
+			const response = await api.getTruckMaintenance(truckId);
+			if (response.success) {
+				maintenanceRecords = response.data;
+			}
+		} catch (error) {
+			console.error('Error loading maintenance records:', error);
+			maintenanceRecords = [];
+		} finally {
+			isLoadingMaintenance = false;
+		}
+	}
+	
+	function toggleMaintenanceForm() {
+		showMaintenanceForm = !showMaintenanceForm;
+		if (!showMaintenanceForm) {
+			maintenanceDescription = '';
+			maintenanceAmount = '';
+			maintenanceDate = new Date().toISOString().split('T')[0];
+		}
+	}
+	
+	async function handleAddMaintenance() {
+		if (!maintenanceDescription.trim() || !maintenanceAmount || parseFloat(maintenanceAmount) <= 0) {
+			alert('Please enter a description and amount greater than 0');
+			return;
+		}
+		
+		try {
+			isAddingMaintenance = true;
+			const response = await api.addMaintenanceRecord(editingTruck.id, {
+				description: maintenanceDescription.trim(),
+				amount: parseFloat(maintenanceAmount),
+				date: maintenanceDate
+			});
+			
+			if (response.success) {
+				// Reload maintenance records
+				await loadMaintenanceRecords(editingTruck.id);
+				// Reload trucks to update profit
+				await loadTrucks();
+				// Reset form
+				toggleMaintenanceForm();
+			} else {
+				alert(response.message || 'Error adding maintenance record');
+			}
+		} catch (error) {
+			console.error('Error adding maintenance:', error);
+			alert(error.message || 'Error adding maintenance record');
+		} finally {
+			isAddingMaintenance = false;
+		}
+	}
+	
+	async function handleDeleteMaintenance(maintenanceId) {
+		// Show custom confirmation modal
+		showConfirmModal = true;
+		confirmTitle = 'Delete Maintenance Record';
+		confirmMessage = 'Are you sure you want to delete this maintenance record? This action cannot be undone.';
+		confirmAction = async () => {
+			try {
+				const response = await api.deleteMaintenanceRecord(editingTruck.id, maintenanceId);
+				if (response.success) {
+					// Reload maintenance records
+					await loadMaintenanceRecords(editingTruck.id);
+					// Reload trucks to update profit
+					await loadTrucks();
+				} else {
+					alert(response.message || 'Error deleting maintenance record');
+				}
+			} catch (error) {
+				console.error('Error deleting maintenance:', error);
+				alert(error.message || 'Error deleting maintenance record');
+			} finally {
+				closeConfirmModal();
+			}
+		};
+	}
+	
+	function closeConfirmModal() {
+		showConfirmModal = false;
+		confirmAction = null;
+		confirmMessage = '';
+		confirmTitle = '';
+	}
+	
+	function handleConfirm() {
+		if (confirmAction) {
+			confirmAction();
+		}
 	}
 
 	function handleAddTruck() {
@@ -120,6 +266,11 @@
 		plateNumber = '';
 		driverName = '';
 		errors = {};
+		maintenanceRecords = [];
+		showMaintenanceForm = false;
+		maintenanceDescription = '';
+		maintenanceAmount = '';
+		maintenanceDate = new Date().toISOString().split('T')[0];
 	}
 
 	function validateTruckForm() {
@@ -379,7 +530,7 @@
 	<!-- Add Truck Modal -->
 	{#if showAddTruckModal}
 		<div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" on:click={closeModal}>
-			<div class="bg-white rounded-lg max-w-md w-full p-6" on:click|stopPropagation>
+			<div class="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto p-6" on:click|stopPropagation>
 				<div class="flex justify-between items-center mb-6">
 					<h2 class="text-2xl font-bold text-gray-900">{editingTruck ? 'Edit Truck' : 'Add Truck'}</h2>
 					<button
@@ -451,6 +602,126 @@
 						</div>
 					{/if}
 
+					<!-- Maintenance Records Section (only show when editing) -->
+					{#if editingTruck}
+						<div class="pt-6 border-t border-gray-200">
+							<div class="flex justify-between items-center mb-4">
+								<h3 class="text-lg font-semibold text-gray-900">Maintenance Records</h3>
+								<button
+									type="button"
+									on:click={toggleMaintenanceForm}
+									class="text-sm text-blue-600 hover:text-blue-700 font-medium"
+								>
+									{showMaintenanceForm ? 'Cancel' : '+ Add Maintenance'}
+								</button>
+							</div>
+
+							<!-- Add Maintenance Form -->
+							{#if showMaintenanceForm}
+								<div class="bg-gray-50 rounded-lg p-4 mb-4 space-y-3">
+									<div>
+										<label for="maintenanceDescription" class="block text-sm font-medium text-gray-700 mb-1">
+											Description <span class="text-red-500">*</span>
+										</label>
+										<input
+											type="text"
+											id="maintenanceDescription"
+											bind:value={maintenanceDescription}
+											placeholder="e.g. Changed 2 tires, New mirror"
+											class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+										/>
+									</div>
+									<div class="grid grid-cols-2 gap-3">
+										<div>
+											<label for="maintenanceAmount" class="block text-sm font-medium text-gray-700 mb-1">
+												Amount (₦) <span class="text-red-500">*</span>
+											</label>
+											<input
+												type="number"
+												id="maintenanceAmount"
+												bind:value={maintenanceAmount}
+												min="0"
+												step="0.01"
+												placeholder="0.00"
+												class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+											/>
+										</div>
+										<div>
+											<label for="maintenanceDate" class="block text-sm font-medium text-gray-700 mb-1">
+												Date <span class="text-red-500">*</span>
+											</label>
+											<input
+												type="date"
+												id="maintenanceDate"
+												bind:value={maintenanceDate}
+												class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+											/>
+										</div>
+									</div>
+									<button
+										type="button"
+										on:click={handleAddMaintenance}
+										disabled={isAddingMaintenance}
+										class="w-full bg-blue-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+									>
+										{#if isAddingMaintenance}
+											<svg class="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+												<circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+												<path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+											</svg>
+											Adding...
+										{:else}
+											Add Maintenance Record
+										{/if}
+									</button>
+								</div>
+							{/if}
+
+							<!-- Maintenance Records List -->
+							{#if isLoadingMaintenance}
+								<div class="text-center py-4 text-sm text-gray-500">Loading maintenance records...</div>
+							{:else if maintenanceRecords.length > 0}
+								<div class="space-y-2 max-h-64 overflow-y-auto">
+									{#each maintenanceRecords as record}
+										<div class="flex items-start justify-between bg-white border border-gray-200 rounded-lg p-3">
+											<div class="flex-1">
+												<p class="text-sm font-medium text-gray-900">{record.description}</p>
+												<div class="flex items-center gap-4 mt-1">
+													<p class="text-sm text-gray-600">{formatCurrency(parseFloat(record.amount))}</p>
+													<p class="text-xs text-gray-500">
+														{new Date(record.date).toLocaleDateString('en-NG', { year: 'numeric', month: 'short', day: 'numeric' })}
+													</p>
+												</div>
+											</div>
+											<button
+												type="button"
+												on:click={() => handleDeleteMaintenance(record.id)}
+												class="text-red-600 hover:text-red-700 ml-2"
+												title="Delete"
+											>
+												<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+													<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+												</svg>
+											</button>
+										</div>
+									{/each}
+								</div>
+								<div class="mt-3 pt-3 border-t border-gray-200">
+									<div class="flex justify-between items-center">
+										<span class="text-sm font-medium text-gray-700">Total Maintenance:</span>
+										<span class="text-sm font-bold text-red-600">
+											{formatCurrency(maintenanceRecords.reduce((sum, r) => sum + parseFloat(r.amount || 0), 0))}
+										</span>
+									</div>
+								</div>
+							{:else}
+								<div class="text-center py-4 text-sm text-gray-500 bg-gray-50 rounded-lg">
+									No maintenance records yet. Click "Add Maintenance" to add one.
+								</div>
+							{/if}
+						</div>
+					{/if}
+
 					<div class="flex gap-3 pt-4">
 						<button
 							type="button"
@@ -477,6 +748,43 @@
 						</button>
 					</div>
 				</form>
+			</div>
+		</div>
+	{/if}
+
+	<!-- Confirmation Modal -->
+	{#if showConfirmModal}
+		<div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" on:click={closeConfirmModal}>
+			<div class="bg-white rounded-lg max-w-md w-full p-6 shadow-xl" on:click|stopPropagation>
+				<div class="flex items-center gap-4 mb-4">
+					<div class="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center flex-shrink-0">
+						<svg class="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+						</svg>
+					</div>
+					<div class="flex-1">
+						<h3 class="text-lg font-semibold text-gray-900">{confirmTitle}</h3>
+					</div>
+				</div>
+				
+				<p class="text-gray-600 mb-6 ml-16">{confirmMessage}</p>
+				
+				<div class="flex gap-3 justify-end">
+					<button
+						type="button"
+						on:click={closeConfirmModal}
+						class="px-4 py-2 border border-gray-300 rounded-lg font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+					>
+						Cancel
+					</button>
+					<button
+						type="button"
+						on:click={handleConfirm}
+						class="px-4 py-2 bg-red-600 text-white rounded-lg font-medium hover:bg-red-700 transition-colors"
+					>
+						Delete
+					</button>
+				</div>
 			</div>
 		</div>
 	{/if}

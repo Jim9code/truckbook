@@ -8,6 +8,7 @@ import subscriptionRoutes from './src/routes/subscriptionRoutes.js';
 import truckRoutes from './src/routes/truckRoutes.js';
 import driverRoutes from './src/routes/driverRoutes.js';
 import tripRoutes from './src/routes/tripRoutes.js';
+import maintenanceRoutes from './src/routes/maintenanceRoutes.js';
 
 // Load environment variables
 dotenv.config();
@@ -34,6 +35,7 @@ app.use('/api/subscriptions', subscriptionRoutes);
 app.use('/api/trucks', truckRoutes);
 app.use('/api/drivers', driverRoutes);
 app.use('/api/trips', tripRoutes);
+app.use('/api', maintenanceRoutes);
 // app.use('/api/customers', customerRoutes);
 
 // Error handling middleware
