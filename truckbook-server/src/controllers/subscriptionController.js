@@ -60,6 +60,8 @@ export const subscribe = async (req, res) => {
     const flutterwaveResult = await createFlutterwaveSubscription(
       {
         email: user.email,
+        fullName: user.fullName,
+        companyName: user.companyName,
         amount: price
       },
       flutterwavePlanId
