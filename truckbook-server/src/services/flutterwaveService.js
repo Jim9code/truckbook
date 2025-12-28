@@ -104,14 +104,30 @@ export const createFlutterwaveSubscription = async (userData, planId) => {
 };
 
 // Verify webhook signature
-export const verifyWebhook = (payload, signature) => {
+export const verifyWebhook = (rawBody, signature) => {
   try {
+    if (!signature || !rawBody) {
+      console.error('Missing signature or raw body');
+      return false;
+    }
+
+    // Flutterwave uses HMAC-SHA256 with base64 encoding
     const hash = crypto
       .createHmac('sha256', process.env.FLUTTERWAVE_WEBHOOK_SECRET)
-      .update(JSON.stringify(payload))
-      .digest('hex');
+      .update(rawBody)
+      .digest('base64'); // Use base64, not hex
     
-    return hash === signature;
+    // Compare signatures
+    const isValid = hash === signature;
+    
+    if (!isValid) {
+      console.error('Signature mismatch:', {
+        computed: hash,
+        received: signature
+      });
+    }
+    
+    return isValid;
   } catch (error) {
     console.error('Webhook verification error:', error);
     return false;
