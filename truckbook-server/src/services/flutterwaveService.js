@@ -104,27 +104,25 @@ export const createFlutterwaveSubscription = async (userData, planId) => {
 };
 
 // Verify webhook signature
-export const verifyWebhook = (rawBody, signature) => {
+// Flutterwave sends the secret hash directly in verif-hash header
+// No HMAC, no hashing - just simple string comparison!
+export const verifyWebhook = (signature) => {
   try {
-    if (!signature || !rawBody) {
-      console.error('Missing signature or raw body');
+    if (!signature) {
+      console.error('Missing verif-hash header');
       return false;
     }
 
-    // Flutterwave uses HMAC-SHA256 with base64 encoding
-    const hash = crypto
-      .createHmac('sha256', process.env.FLUTTERWAVE_WEBHOOK_SECRET)
-      .update(rawBody)
-      .digest('base64'); // Use base64, not hex
-    
-    // Compare signatures
-    const isValid = hash === signature;
+    // Simple string comparison - Flutterwave sends the secret hash directly
+    const isValid = signature === process.env.FLUTTERWAVE_WEBHOOK_SECRET;
     
     if (!isValid) {
-      console.error('Signature mismatch:', {
-        computed: hash,
-        received: signature
+      console.error('Invalid webhook signature:', {
+        received: signature,
+        expected: process.env.FLUTTERWAVE_WEBHOOK_SECRET ? 'Set' : 'Not set'
       });
+    } else {
+      console.log('✅ Webhook signature verified successfully');
     }
     
     return isValid;

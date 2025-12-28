@@ -147,38 +147,25 @@ export const getSubscriptionStatus = async (req, res) => {
 // Webhook handler for Flutterwave
 export const handleWebhook = async (req, res) => {
   try {
-    // Get raw body (Buffer from express.raw middleware)
-    const rawBody = req.body instanceof Buffer ? req.body.toString('utf8') : JSON.stringify(req.body);
-    const signature = req.headers['verif-hash'] || req.headers['flutterwave-signature'];
+    // Flutterwave sends the secret hash directly in verif-hash header
+    const signature = req.headers['verif-hash'];
     
-    console.log('Webhook signature header:', signature ? 'Present' : 'Missing');
-    console.log('Webhook raw body length:', rawBody?.length || 'N/A');
+    console.log('Webhook received - verif-hash header:', signature ? 'Present' : 'Missing');
 
-    // Verify webhook signature
+    // Verify webhook signature (simple string comparison)
     const { verifyWebhook } = await import('../services/flutterwaveService.js');
-    const isValid = verifyWebhook(rawBody, signature);
+    const isValid = verifyWebhook(signature);
 
     if (!isValid) {
       console.error('Invalid webhook signature');
-      console.error('Expected secret hash:', process.env.FLUTTERWAVE_WEBHOOK_SECRET ? 'Set' : 'Not set');
-      // Temporarily allow webhook to proceed for debugging (remove in production)
-      console.warn('⚠️  Webhook signature verification failed, but proceeding for debugging');
-      // Uncomment below in production:
-      // return res.status(401).json({
-      //   success: false,
-      //   message: 'Invalid webhook signature'
-      // });
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid webhook signature'
+      });
     }
 
-    // Parse body - if it's a Buffer (from express.raw), convert to string then parse
-    let payload;
-    if (req.body instanceof Buffer) {
-      payload = JSON.parse(req.body.toString('utf8'));
-    } else if (typeof req.body === 'string') {
-      payload = JSON.parse(req.body);
-    } else {
-      payload = req.body;
-    }
+    // Payload is already parsed by express.json()
+    const payload = req.body;
 
     // Log webhook for debugging
     console.log('Webhook received:', JSON.stringify(payload, null, 2));
@@ -190,12 +177,10 @@ export const handleWebhook = async (req, res) => {
     console.log('Webhook event:', event);
     console.log('Webhook data:', JSON.stringify(data, null, 2));
 
-    console.log('Webhook event:', event);
-    console.log('Webhook data:', JSON.stringify(data, null, 2));
-
     switch (event) {
       case 'charge.successful':
       case 'payment.successful':
+      case 'charge.completed':
         // Payment successful - find subscription by tx_ref and update
         const txRef = data.tx_ref || data.txRef;
         if (txRef) {

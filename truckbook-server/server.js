@@ -22,9 +22,6 @@ app.use(cors({
   credentials: true
 }));
 
-// Capture raw body for webhook verification (must be before express.json())
-app.use('/api/subscriptions/webhook', express.raw({ type: 'application/json' }));
-
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
