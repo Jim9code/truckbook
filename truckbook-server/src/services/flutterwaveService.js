@@ -23,6 +23,18 @@ export const createFlutterwaveSubscription = async (userData, planId) => {
     // Generate a unique transaction reference
     const txRef = `TRUCKBOOKS-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
     
+    // Log plan ID for debugging
+    console.log('Creating payment with plan ID:', planId);
+    console.log('Plan ID type:', typeof planId);
+    
+    // Convert planId to integer if it's a string
+    const planIdInt = typeof planId === 'string' ? parseInt(planId, 10) : planId;
+    
+    // Validate plan ID
+    if (!planIdInt || isNaN(planIdInt)) {
+      throw new Error(`Invalid plan ID: ${planId}`);
+    }
+    
     const payload = {
       tx_ref: txRef,
       amount: userData.amount.toString(), // Ensure amount is string
@@ -37,9 +49,15 @@ export const createFlutterwaveSubscription = async (userData, planId) => {
         title: `${userData.companyName || 'TruckBooks'} - Subscription`,
         description: `Monthly subscription for ${userData.companyName || 'your company'}`
       },
-      // Include payment plan for subscription
-      payment_plan: planId.toString() // Ensure planId is string
+      // Include payment plan for subscription - use integer
+      payment_plan: planIdInt
     };
+
+    // Log payload for debugging (without sensitive data)
+    console.log('Payment payload:', {
+      ...payload,
+      customer: { email: payload.customer.email, name: payload.customer.name }
+    });
 
     // Use Flutterwave Standard Payments API (supports payment_plan)
     const response = await axios.post(
