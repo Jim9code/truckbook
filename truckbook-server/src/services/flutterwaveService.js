@@ -144,3 +144,39 @@ export const getFlutterwaveSubscription = async (subscriptionId) => {
   }
 };
 
+// Cancel subscription in Flutterwave
+export const cancelFlutterwaveSubscription = async (subscriptionId) => {
+  try {
+    // Use Flutterwave REST API to cancel subscription
+    const response = await axios.put(
+      `https://api.flutterwave.com/v3/subscriptions/${subscriptionId}/cancel`,
+      {},
+      {
+        headers: {
+          'Authorization': `Bearer ${process.env.FLUTTERWAVE_SECRET_KEY}`,
+          'Content-Type': 'application/json'
+        }
+      }
+    );
+    
+    if (response.data.status === 'success') {
+      return {
+        success: true,
+        data: response.data.data
+      };
+    } else {
+      return {
+        success: false,
+        message: response.data.message || 'Failed to cancel subscription'
+      };
+    }
+  } catch (error) {
+    console.error('Flutterwave cancellation error:', error);
+    console.error('Error details:', error.response?.data || error.message);
+    return {
+      success: false,
+      message: error.response?.data?.message || error.message || 'Error cancelling subscription'
+    };
+  }
+};
+

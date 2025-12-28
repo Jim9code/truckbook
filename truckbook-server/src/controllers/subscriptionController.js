@@ -3,11 +3,14 @@ import {
   checkSubscriptionStatus,
   getPlanPrice,
   updateSubscriptionWithFlutterwave,
-  getSubscriptionByFlutterwaveId
+  getSubscriptionByFlutterwaveId,
+  cancelSubscription,
+  getActiveSubscription
 } from '../services/subscriptionService.js';
 import {
   createFlutterwaveSubscription,
-  getFlutterwavePlanId
+  getFlutterwavePlanId,
+  cancelFlutterwaveSubscription
 } from '../services/flutterwaveService.js';
 import { getModels } from '../utils/models.js';
 
@@ -183,6 +186,7 @@ export const handleWebhook = async (req, res) => {
         break;
 
       case 'subscription.disabled':
+      case 'subscription.cancelled':
         // Subscription cancelled/disabled
         if (data.subscription_id) {
           const subscription = await getSubscriptionByFlutterwaveId(data.subscription_id.toString());
@@ -205,6 +209,53 @@ export const handleWebhook = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error processing webhook',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+};
+
+// Cancel subscription
+export const cancelSubscriptionController = async (req, res) => {
+  try {
+    const userId = req.userId;
+
+    // Get active subscription
+    const subscription = await getActiveSubscription(userId);
+
+    if (!subscription) {
+      return res.status(404).json({
+        success: false,
+        message: 'No active subscription found'
+      });
+    }
+
+    // Cancel in Flutterwave if subscription ID exists
+    if (subscription.flutterwaveSubscriptionId) {
+      const flutterwaveResult = await cancelFlutterwaveSubscription(
+        subscription.flutterwaveSubscriptionId
+      );
+
+      if (!flutterwaveResult.success) {
+        console.error('Failed to cancel in Flutterwave:', flutterwaveResult.message);
+        // Continue with local cancellation even if Flutterwave fails
+      }
+    }
+
+    // Cancel in database
+    const cancelledSubscription = await cancelSubscription(userId);
+
+    res.json({
+      success: true,
+      message: 'Subscription cancelled successfully',
+      data: {
+        subscription: cancelledSubscription
+      }
+    });
+  } catch (error) {
+    console.error('Cancel subscription error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error cancelling subscription',
       error: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }

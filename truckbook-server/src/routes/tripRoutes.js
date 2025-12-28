@@ -9,11 +9,13 @@ import {
 } from '../controllers/tripController.js';
 import { validateTrip } from '../utils/validators.js';
 import { authenticate } from '../middleware/auth.js';
+import { requireSubscription } from '../middleware/subscription.js';
 
 const router = express.Router();
 
-// All trip routes require authentication
+// All trip routes require authentication AND active subscription
 router.use(authenticate);
+router.use(requireSubscription);
 
 router.get('/stats', getStats);
 router.get('/', getTrips);

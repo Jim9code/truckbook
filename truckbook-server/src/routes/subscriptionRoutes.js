@@ -1,5 +1,5 @@
 import express from 'express';
-import { subscribe, getSubscriptionStatus, handleWebhook } from '../controllers/subscriptionController.js';
+import { subscribe, getSubscriptionStatus, handleWebhook, cancelSubscriptionController } from '../controllers/subscriptionController.js';
 import { validateSubscription } from '../utils/validators.js';
 import { authenticate } from '../middleware/auth.js';
 
@@ -13,6 +13,7 @@ router.use(authenticate);
 
 router.post('/', validateSubscription, subscribe);
 router.get('/status', getSubscriptionStatus);
+router.delete('/', cancelSubscriptionController);
 
 export default router;
 

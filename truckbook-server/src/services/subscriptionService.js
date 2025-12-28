@@ -133,3 +133,25 @@ export const getSubscriptionByFlutterwaveId = async (flutterwaveSubscriptionId) 
   return subscription ? subscription.toJSON() : null;
 };
 
+// Cancel subscription
+export const cancelSubscription = async (userId) => {
+  const { Subscription } = await getModels();
+  
+  const subscription = await Subscription.findOne({
+    where: {
+      userId,
+      status: 'active'
+    },
+    order: [['createdAt', 'DESC']]
+  });
+
+  if (!subscription) {
+    throw new Error('No active subscription found');
+  }
+
+  // Update status to inactive
+  await subscription.update({ status: 'inactive' });
+
+  return subscription.toJSON();
+};
+
