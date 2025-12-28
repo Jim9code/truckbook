@@ -7,6 +7,7 @@ import {
   updateTripController,
   deleteTripController
 } from '../controllers/tripController.js';
+import { exportTrips } from '../controllers/exportController.js';
 import { validateTrip } from '../utils/validators.js';
 import { authenticate } from '../middleware/auth.js';
 import { requireSubscription } from '../middleware/subscription.js';
@@ -18,6 +19,7 @@ router.use(authenticate);
 router.use(requireSubscription);
 
 router.get('/stats', getStats);
+router.get('/export', exportTrips); // Export route (must be before /:id)
 router.get('/', getTrips);
 router.get('/:id', getTrip);
 router.post('/', validateTrip, addTrip);
