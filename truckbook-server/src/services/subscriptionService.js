@@ -133,6 +133,32 @@ export const getSubscriptionByFlutterwaveId = async (flutterwaveSubscriptionId) 
   return subscription ? subscription.toJSON() : null;
 };
 
+// Get subscription by payment reference (tx_ref)
+export const getSubscriptionByTxRef = async (txRef) => {
+  const { Subscription } = await getModels();
+  const subscription = await Subscription.findOne({
+    where: {
+      paymentReference: txRef
+    }
+  });
+
+  return subscription ? subscription.toJSON() : null;
+};
+
+// Get pending subscription for user
+export const getPendingSubscription = async (userId) => {
+  const { Subscription } = await getModels();
+  const subscription = await Subscription.findOne({
+    where: {
+      userId,
+      status: 'pending'
+    },
+    order: [['createdAt', 'DESC']]
+  });
+
+  return subscription ? subscription.toJSON() : null;
+};
+
 // Cancel subscription
 export const cancelSubscription = async (userId) => {
   const { Subscription } = await getModels();

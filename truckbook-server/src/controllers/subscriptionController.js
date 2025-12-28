@@ -4,6 +4,8 @@ import {
   getPlanPrice,
   updateSubscriptionWithFlutterwave,
   getSubscriptionByFlutterwaveId,
+  getSubscriptionByTxRef,
+  getPendingSubscription,
   cancelSubscription,
   getActiveSubscription
 } from '../services/subscriptionService.js';
@@ -20,13 +22,14 @@ export const subscribe = async (req, res) => {
     const userId = req.userId;
     const { planType } = req.body;
 
-    // Check if user already has an active subscription
+    // Check if user already has an active or pending subscription
     const currentStatus = await checkSubscriptionStatus(userId);
+    const pendingSubscription = await getPendingSubscription(userId);
     
-    if (currentStatus.hasActiveSubscription) {
+    if (currentStatus.hasActiveSubscription || pendingSubscription) {
       return res.status(400).json({
         success: false,
-        message: 'You already have an active subscription'
+        message: 'You already have an active or pending subscription'
       });
     }
 
@@ -78,13 +81,26 @@ export const subscribe = async (req, res) => {
     }
 
     const flutterwaveData = flutterwaveResult.data;
+    
+    // Extract tx_ref from the response (it's stored in the data object we return)
+    const txRef = flutterwaveData.tx_ref || null;
+
+    if (!txRef) {
+      console.error('No tx_ref in Flutterwave response:', flutterwaveData);
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to get transaction reference from payment'
+      });
+    }
 
     // Create subscription in database
+    // Note: We don't have subscription ID yet - Flutterwave creates it after payment
+    // We'll update it via webhook using tx_ref
     const subscription = await createSubscription(userId, planType, {
-      subscriptionId: flutterwaveData.id?.toString(),
+      subscriptionId: null, // Will be updated by webhook after payment
       planId: flutterwavePlanId,
-      paymentReference: flutterwaveData.tx_ref || null,
-      nextPaymentDate: flutterwaveData.next_payment_date || null
+      paymentReference: txRef, // Store tx_ref for webhook lookup
+      nextPaymentDate: null // Will be set by webhook
     });
 
     res.status(201).json({
@@ -148,25 +164,63 @@ export const handleWebhook = async (req, res) => {
       });
     }
 
+    // Log webhook for debugging
+    console.log('Webhook received:', JSON.stringify(payload, null, 2));
+
     // Handle different event types
     const event = payload.event || payload.type;
     const data = payload.data || payload;
 
+    console.log('Webhook event:', event);
+    console.log('Webhook data:', JSON.stringify(data, null, 2));
+
     switch (event) {
-      case 'subscription.create':
       case 'charge.successful':
-        // Subscription created or payment successful
-        if (data.subscription_id || data.subscription?.id) {
-          const subscriptionId = data.subscription_id || data.subscription?.id;
-          const subscription = await getSubscriptionByFlutterwaveId(subscriptionId.toString());
+      case 'payment.successful':
+        // Payment successful - find subscription by tx_ref and update
+        const txRef = data.tx_ref || data.txRef;
+        if (txRef) {
+          const subscription = await getSubscriptionByTxRef(txRef);
           
           if (subscription) {
             await updateSubscriptionWithFlutterwave(subscription.id, {
               status: 'active',
-              paymentReference: data.tx_ref || data.txRef || null,
+              subscriptionId: data.subscription_id || data.subscription?.id || null,
+              paymentReference: txRef,
               nextPaymentDate: data.next_payment_date || data.nextPaymentDate || null
             });
+            console.log('Subscription activated for tx_ref:', txRef);
+          } else {
+            console.error('Subscription not found for tx_ref:', txRef);
           }
+        }
+        break;
+
+      case 'subscription.create':
+        // Subscription created - find by subscription ID or tx_ref
+        const subscriptionId = data.subscription_id || data.id;
+        const subscriptionTxRef = data.tx_ref || data.txRef;
+        
+        let subscription = null;
+        if (subscriptionId) {
+          subscription = await getSubscriptionByFlutterwaveId(subscriptionId.toString());
+        }
+        
+        // If not found by ID, try by tx_ref
+        if (!subscription && subscriptionTxRef) {
+          subscription = await getSubscriptionByTxRef(subscriptionTxRef);
+        }
+        
+        if (subscription) {
+          await updateSubscriptionWithFlutterwave(subscription.id, {
+            status: 'active',
+            subscriptionId: subscriptionId ? subscriptionId.toString() : subscription.flutterwaveSubscriptionId,
+            paymentReference: subscriptionTxRef || subscription.paymentReference,
+            nextPaymentDate: data.next_payment_date || data.nextPaymentDate || null
+          });
+          console.log('Subscription activated via subscription.create event');
+        } else {
+          console.error('Subscription not found for subscription.create event');
         }
         break;
 
