@@ -5,7 +5,6 @@ import {
   updateSubscriptionWithFlutterwave,
   getSubscriptionByFlutterwaveId,
   getSubscriptionByTxRef,
-  getPendingSubscription,
   cancelSubscription,
   getActiveSubscription
 } from '../services/subscriptionService.js';
@@ -22,14 +21,13 @@ export const subscribe = async (req, res) => {
     const userId = req.userId;
     const { planType } = req.body;
 
-    // Check if user already has an active or pending subscription
+    // Check if user already has an active subscription (only check active, not pending)
     const currentStatus = await checkSubscriptionStatus(userId);
-    const pendingSubscription = await getPendingSubscription(userId);
     
-    if (currentStatus.hasActiveSubscription || pendingSubscription) {
+    if (currentStatus.hasActiveSubscription) {
       return res.status(400).json({
         success: false,
-        message: 'You already have an active or pending subscription'
+        message: 'You already have an active subscription'
       });
     }
 
