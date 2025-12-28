@@ -4,6 +4,7 @@
 	import { onMount } from 'svelte';
 	import { browser } from '$app/environment';
 	import { api } from '$lib/api.js';
+	import SkeletonCard from '$lib/components/SkeletonCard.svelte';
 
 	// Get trip ID from query params
 	$: tripId = $page.url.searchParams.get('id');
@@ -32,6 +33,8 @@
 	let trucks = [];
 	let drivers = [];
 	let isLoadingData = true;
+	let isLoadingTrip = false; // Loading state for trip data in edit mode
+	let isSaving = false; // Loading state for save button
 
 	// Sample trips data - will be replaced with API call
 	const sampleTrips = [
@@ -129,6 +132,7 @@
 
 	async function loadTripData(id) {
 		try {
+			isLoadingTrip = true; // Set loading state
 			const response = await api.getTrip(id);
 			if (response.success && response.data) {
 				const trip = response.data;
@@ -151,6 +155,8 @@
 			console.error('Error loading trip:', error);
 			alert('Error loading trip data. Please try again.');
 			goto('/trips');
+		} finally {
+			isLoadingTrip = false; // Clear loading state
 		}
 	}
 
@@ -176,6 +182,9 @@
 	}
 
 	async function handleSave() {
+		// Prevent double submission
+		if (isSaving) return;
+
 		// Validate required fields
 		if (!tripDate || !selectedTruck || !selectedDriver || !selectedCustomer || !routeFrom || !routeTo) {
 			alert('Please fill in all required fields');
@@ -228,6 +237,7 @@
 
 		// Save/update trip via API
 		try {
+			isSaving = true; // Set saving state
 			let response;
 			if (isEditMode && tripId) {
 				// Update existing trip
@@ -246,6 +256,8 @@
 		} catch (error) {
 			console.error('Error saving trip:', error);
 			alert(error.message || 'Error saving trip. Please try again.');
+		} finally {
+			isSaving = false; // Clear saving state
 		}
 	}
 
@@ -329,25 +341,49 @@
 			<div class="flex gap-3">
 				<button
 					on:click={handleCancel}
-					class="px-5 py-2.5 border border-gray-300 rounded-lg font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+					disabled={isSaving}
+					class="px-5 py-2.5 border border-gray-300 rounded-lg font-medium text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
 				>
 					Cancel
 				</button>
 				<button
 					on:click={handleSave}
-					class="px-5 py-2.5 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors flex items-center gap-2"
+					disabled={isSaving || isLoadingTrip}
+					class="px-5 py-2.5 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
 				>
-					<svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-						<path d="M8 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0zM15 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0z" />
-						<path d="M3 4a1 1 0 00-1 1v10a1 1 0 001 1h1.05a2.5 2.5 0 014.9 0H10a1 1 0 001-1V5a1 1 0 00-1-1H3zM14 7a1 1 0 00-1 1v6.05A2.5 2.5 0 0115.95 16H17a1 1 0 001-1v-5a1 1 0 00-.293-.707l-2-2A1 1 0 0015 7h-1z" />
-					</svg>
-					{isEditMode ? 'Update Trip' : 'Save Trip'}
+					{#if isSaving}
+						<svg class="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
+							<circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+							<path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+						</svg>
+						{isEditMode ? 'Updating...' : 'Saving...'}
+					{:else}
+						<svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+							<path d="M8 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0zM15 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0z" />
+							<path d="M3 4a1 1 0 00-1 1v10a1 1 0 001 1h1.05a2.5 2.5 0 014.9 0H10a1 1 0 001-1V5a1 1 0 00-1-1H3zM14 7a1 1 0 00-1 1v6.05A2.5 2.5 0 0115.95 16H17a1 1 0 001-1v-5a1 1 0 00-.293-.707l-2-2A1 1 0 0015 7h-1z" />
+						</svg>
+						{isEditMode ? 'Update Trip' : 'Save Trip'}
+					{/if}
 				</button>
 			</div>
 		</div>
 
 		<!-- Two Column Layout: Form on left, Summary on right -->
-		<div class="trip-layout">
+		{#if isLoadingTrip}
+			<!-- Skeleton Loading for Edit Mode -->
+			<div class="trip-layout">
+				<div class="trip-form space-y-6">
+					<SkeletonCard />
+					<SkeletonCard />
+					<SkeletonCard />
+					<SkeletonCard />
+				</div>
+				<div class="trip-summary">
+					<SkeletonCard />
+				</div>
+			</div>
+		{:else}
+			<div class="trip-layout">
 			<!-- Left Column - Form Sections (2/3 width) -->
 			<div class="trip-form space-y-6">
 				<!-- A. Basic Information -->
@@ -668,5 +704,6 @@
 				</div>
 			</div>
 		</div>
+		{/if}
 	</main>
 </div>

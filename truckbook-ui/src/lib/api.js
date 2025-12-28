@@ -151,6 +151,56 @@ export const api = {
           return apiRequest(`/trips/stats${query ? `?${query}` : ''}`);
         },
 
+        exportTrucks: async (format) => {
+          const token = getToken();
+          if (!token) {
+            throw new Error('Not authenticated');
+          }
+
+          try {
+            const queryParams = new URLSearchParams();
+            queryParams.append('format', format);
+
+            const response = await fetch(`${API_BASE_URL}/trucks/export?${queryParams.toString()}`, {
+              method: 'GET',
+              headers: {
+                'Authorization': `Bearer ${token}`
+              }
+            });
+
+            if (!response.ok) {
+              const error = await response.json();
+              throw new Error(error.message || 'Export failed');
+            }
+
+            // Get filename from Content-Disposition header or use default
+            const contentDisposition = response.headers.get('Content-Disposition');
+            let filename = `trucks-report-${Date.now()}.${format === 'excel' ? 'xlsx' : 'pdf'}`;
+            if (contentDisposition) {
+              const filenameMatch = contentDisposition.match(/filename="?(.+)"?/i);
+              if (filenameMatch) {
+                filename = filenameMatch[1];
+              }
+            }
+
+            // Get blob and create download link
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+
+            return { success: true };
+          } catch (error) {
+            console.error('Export error:', error);
+            throw error;
+          }
+        },
+
         exportTrips: async (format, filters = {}) => {
           const token = getToken();
           if (!token) {

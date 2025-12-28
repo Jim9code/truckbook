@@ -1,5 +1,6 @@
 import express from 'express';
 import { getTrucks, addTruck, getTruck, updateTruckController } from '../controllers/truckController.js';
+import { exportTrucks } from '../controllers/exportController.js';
 import { validateTruck } from '../utils/validators.js';
 import { authenticate } from '../middleware/auth.js';
 import { requireSubscription } from '../middleware/subscription.js';
@@ -10,6 +11,7 @@ const router = express.Router();
 router.use(authenticate);
 router.use(requireSubscription);
 
+router.get('/export', exportTrucks); // Export route (must be before /:id)
 router.get('/', getTrucks);
 router.post('/', validateTruck, addTruck);
 router.get('/:id', getTruck);

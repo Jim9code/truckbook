@@ -1,4 +1,4 @@
-import { exportTripsToExcel, exportTripsToPDF } from '../services/exportService.js';
+import { exportTripsToExcel, exportTripsToPDF, exportTrucksToExcel, exportTrucksToPDF } from '../services/exportService.js';
 
 // Export trips
 export const exportTrips = async (req, res) => {
@@ -42,6 +42,43 @@ export const exportTrips = async (req, res) => {
       res.setHeader('Content-Type', 'application/pdf');
       res.setHeader('Content-Disposition', `attachment; filename="trips-report-${Date.now()}.pdf"`);
       
+      res.send(buffer);
+    }
+  } catch (error) {
+    console.error('Export error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error generating export file',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+};
+
+// Export trucks
+export const exportTrucks = async (req, res) => {
+  try {
+    const userId = req.userId;
+    const { format } = req.query;
+
+    // Validate format
+    if (!format || !['excel', 'pdf'].includes(format.toLowerCase())) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid format. Must be "excel" or "pdf"'
+      });
+    }
+
+    const exportFormat = format.toLowerCase();
+
+    if (exportFormat === 'excel') {
+      const buffer = await exportTrucksToExcel(userId);
+      res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+      res.setHeader('Content-Disposition', `attachment; filename="trucks-report-${Date.now()}.xlsx"`);
+      res.send(buffer);
+    } else if (exportFormat === 'pdf') {
+      const buffer = await exportTrucksToPDF(userId);
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `attachment; filename="trucks-report-${Date.now()}.pdf"`);
       res.send(buffer);
     }
   } catch (error) {
