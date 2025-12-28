@@ -26,7 +26,7 @@ export default (sequelize) => {
       allowNull: false
     },
     status: {
-      type: DataTypes.ENUM('active', 'inactive', 'expired'),
+      type: DataTypes.ENUM('active', 'inactive', 'expired', 'pending'),
       defaultValue: 'inactive'
     },
     startDate: {
@@ -36,6 +36,27 @@ export default (sequelize) => {
     endDate: {
       type: DataTypes.DATEONLY,
       field: 'end_date'
+    },
+    // Flutterwave fields
+    flutterwaveSubscriptionId: {
+      type: DataTypes.STRING(255),
+      allowNull: true,
+      field: 'flutterwave_subscription_id'
+    },
+    flutterwavePlanId: {
+      type: DataTypes.STRING(255),
+      allowNull: true,
+      field: 'flutterwave_plan_id'
+    },
+    paymentReference: {
+      type: DataTypes.STRING(255),
+      allowNull: true,
+      field: 'payment_reference'
+    },
+    nextPaymentDate: {
+      type: DataTypes.DATEONLY,
+      allowNull: true,
+      field: 'next_payment_date'
     }
   }, {
     tableName: 'subscriptions',

@@ -19,7 +19,7 @@ export const calculateEndDate = (startDate) => {
 };
 
 // Create subscription
-export const createSubscription = async (userId, planType) => {
+export const createSubscription = async (userId, planType, flutterwaveData = null) => {
   const { Subscription } = await getModels();
   const price = getPlanPrice(planType);
   if (!price) {
@@ -29,14 +29,26 @@ export const createSubscription = async (userId, planType) => {
   const startDate = new Date();
   const endDate = calculateEndDate(startDate);
 
-  const subscription = await Subscription.create({
+  const subscriptionData = {
     userId,
     planType,
     price,
-    status: 'active',
+    status: flutterwaveData ? 'pending' : 'active',
     startDate: startDate.toISOString().split('T')[0],
     endDate: endDate.toISOString().split('T')[0]
-  });
+  };
+
+  // Add Flutterwave data if provided
+  if (flutterwaveData) {
+    subscriptionData.flutterwaveSubscriptionId = flutterwaveData.subscriptionId;
+    subscriptionData.flutterwavePlanId = flutterwaveData.planId;
+    subscriptionData.paymentReference = flutterwaveData.paymentReference;
+    if (flutterwaveData.nextPaymentDate) {
+      subscriptionData.nextPaymentDate = flutterwaveData.nextPaymentDate;
+    }
+  }
+
+  const subscription = await Subscription.create(subscriptionData);
 
   return subscription.toJSON();
 };
@@ -77,5 +89,47 @@ export const checkSubscriptionStatus = async (userId) => {
     hasActiveSubscription: !!subscription,
     subscription: subscription || null
   };
+};
+
+// Update subscription with Flutterwave data
+export const updateSubscriptionWithFlutterwave = async (subscriptionId, flutterwaveData) => {
+  const { Subscription } = await getModels();
+  
+  const subscription = await Subscription.findByPk(subscriptionId);
+  if (!subscription) {
+    throw new Error('Subscription not found');
+  }
+
+  const updateData = {};
+  if (flutterwaveData.subscriptionId) {
+    updateData.flutterwaveSubscriptionId = flutterwaveData.subscriptionId;
+  }
+  if (flutterwaveData.planId) {
+    updateData.flutterwavePlanId = flutterwaveData.planId;
+  }
+  if (flutterwaveData.paymentReference) {
+    updateData.paymentReference = flutterwaveData.paymentReference;
+  }
+  if (flutterwaveData.nextPaymentDate) {
+    updateData.nextPaymentDate = flutterwaveData.nextPaymentDate;
+  }
+  if (flutterwaveData.status) {
+    updateData.status = flutterwaveData.status;
+  }
+
+  await subscription.update(updateData);
+  return subscription.toJSON();
+};
+
+// Get subscription by Flutterwave subscription ID
+export const getSubscriptionByFlutterwaveId = async (flutterwaveSubscriptionId) => {
+  const { Subscription } = await getModels();
+  const subscription = await Subscription.findOne({
+    where: {
+      flutterwaveSubscriptionId
+    }
+  });
+
+  return subscription ? subscription.toJSON() : null;
 };
 

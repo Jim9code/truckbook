@@ -14,8 +14,14 @@
 			const response = await api.subscribe(planType);
 
 			if (response.success) {
-				// On successful subscription → redirect to Trips Dashboard
-				goto('/trips');
+				// If there's a payment link, redirect to it
+				if (response.data.paymentLink || response.data.authorizationUrl) {
+					const paymentUrl = response.data.paymentLink || response.data.authorizationUrl;
+					window.location.href = paymentUrl;
+				} else {
+					// If no payment link, redirect to trips (payment might be handled differently)
+					goto('/trips');
+				}
 			}
 		} catch (err) {
 			console.error('Subscription error:', err);
