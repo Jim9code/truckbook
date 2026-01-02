@@ -1,4 +1,5 @@
 <script>
+	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { api } from '$lib/api.js';
 	import logo from '$lib/assets/truckbooklogo.png';
@@ -6,6 +7,27 @@
 	let selectedPlan = 'large-fleet'; // Default to recommended plan
 	let isLoading = false;
 	let error = '';
+	let subscriptionStatus = null;
+	let isLoadingStatus = true;
+	let isCancelling = false;
+
+	onMount(async () => {
+		await loadSubscriptionStatus();
+	});
+
+	async function loadSubscriptionStatus() {
+		try {
+			isLoadingStatus = true;
+			const response = await api.getSubscriptionStatus();
+			if (response.success) {
+				subscriptionStatus = response.data;
+			}
+		} catch (error) {
+			console.error('Error loading subscription status:', error);
+		} finally {
+			isLoadingStatus = false;
+		}
+	}
 
 	async function handleSubscribe(planType) {
 		isLoading = true;
@@ -31,6 +53,27 @@
 			isLoading = false;
 		}
 	}
+
+	async function handleCancelSubscription() {
+		if (!confirm('Are you sure you want to cancel your subscription? You will lose access to all features after the current billing period.')) {
+			return;
+		}
+		
+		isCancelling = true;
+		try {
+			const response = await api.cancelSubscription();
+			if (response.success) {
+				// Reload subscription status
+				await loadSubscriptionStatus();
+				alert('Subscription cancelled successfully');
+			}
+		} catch (error) {
+			console.error('Error cancelling subscription:', error);
+			alert(error.message || 'Failed to cancel subscription. Please try again.');
+		} finally {
+			isCancelling = false;
+		}
+	}
 </script>
 
 <div class="min-h-screen bg-gray-50">
@@ -48,23 +91,100 @@
 
 	<!-- Main Content -->
 	<main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-		<!-- Header -->
-		<div class="text-center mb-12">
-			<h1 class="text-4xl font-bold text-gray-900 mb-4">Choose a plan that fits your fleet</h1>
-			<p class="text-xl text-gray-600">
-				Simple, transparent pricing for your logistics business. Scale your operations without worrying about hidden costs.
-			</p>
-		</div>
-
-		<!-- Error Message -->
-		{#if error}
-			<div class="max-w-5xl mx-auto mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
-				<p class="text-red-700 text-sm">{error}</p>
+		{#if isLoadingStatus}
+			<!-- Loading state -->
+			<div class="text-center py-12">
+				<div class="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
 			</div>
-		{/if}
+		{:else if subscriptionStatus?.hasActiveSubscription && subscriptionStatus?.subscription}
+			<!-- Current Subscription View -->
+			<div class="max-w-3xl mx-auto">
+				<div class="text-center mb-8">
+					<h1 class="text-4xl font-bold text-gray-900 mb-4">Your Subscription</h1>
+					<p class="text-xl text-gray-600">Manage your current plan</p>
+				</div>
 
-		<!-- Pricing Cards -->
-		<div class="grid md:grid-cols-2 gap-8 max-w-5xl mx-auto mb-12">
+				<div class="bg-white rounded-lg border-2 border-blue-600 p-8 shadow-lg">
+					<div class="flex items-center justify-between mb-6">
+						<div>
+							<h2 class="text-2xl font-bold text-gray-900 mb-2">
+								{subscriptionStatus.subscription.planType === 'starter' ? 'Starter Plan' : 'Large Fleet Plan'}
+							</h2>
+							<p class="text-gray-600">Active Subscription</p>
+						</div>
+						<div class="text-right">
+							<div class="text-3xl font-bold text-gray-900">
+								₦{subscriptionStatus.subscription.price?.toLocaleString('en-NG') || (subscriptionStatus.subscription.planType === 'starter' ? '39,000' : '99,000')}
+							</div>
+							<p class="text-gray-600 text-sm">per month</p>
+						</div>
+					</div>
+
+					<div class="border-t border-gray-200 pt-6 mb-6">
+						<div class="grid md:grid-cols-2 gap-4 text-sm">
+							<div>
+								<p class="text-gray-500 mb-1">Status</p>
+								<p class="font-semibold text-green-600 capitalize">{subscriptionStatus.subscription.status}</p>
+							</div>
+							<div>
+								<p class="text-gray-500 mb-1">Start Date</p>
+								<p class="font-semibold text-gray-900">
+									{subscriptionStatus.subscription.startDate ? new Date(subscriptionStatus.subscription.startDate).toLocaleDateString('en-NG') : 'N/A'}
+								</p>
+							</div>
+							<div>
+								<p class="text-gray-500 mb-1">End Date</p>
+								<p class="font-semibold text-gray-900">
+									{subscriptionStatus.subscription.endDate ? new Date(subscriptionStatus.subscription.endDate).toLocaleDateString('en-NG') : 'N/A'}
+								</p>
+							</div>
+							{#if subscriptionStatus.subscription.nextPaymentDate}
+								<div>
+									<p class="text-gray-500 mb-1">Next Payment</p>
+									<p class="font-semibold text-gray-900">
+										{new Date(subscriptionStatus.subscription.nextPaymentDate).toLocaleDateString('en-NG')}
+									</p>
+								</div>
+							{/if}
+						</div>
+					</div>
+
+					<div class="flex gap-4">
+						<button
+							on:click={handleCancelSubscription}
+							disabled={isCancelling}
+							class="flex-1 bg-red-600 text-white py-3 rounded-lg font-medium hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+						>
+							{isCancelling ? 'Cancelling...' : 'Cancel Subscription'}
+						</button>
+						<button
+							on:click={() => goto('/trips')}
+							class="flex-1 bg-gray-100 text-gray-900 py-3 rounded-lg font-medium hover:bg-gray-200 transition-colors"
+						>
+							Back to Dashboard
+						</button>
+					</div>
+				</div>
+			</div>
+		{:else}
+			<!-- Plan Selection View -->
+			<!-- Header -->
+			<div class="text-center mb-12">
+				<h1 class="text-4xl font-bold text-gray-900 mb-4">Choose a plan that fits your fleet</h1>
+				<p class="text-xl text-gray-600">
+					Simple, transparent pricing for your logistics business. Scale your operations without worrying about hidden costs.
+				</p>
+			</div>
+
+			<!-- Error Message -->
+			{#if error}
+				<div class="max-w-5xl mx-auto mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+					<p class="text-red-700 text-sm">{error}</p>
+				</div>
+			{/if}
+
+			<!-- Pricing Cards -->
+			<div class="grid md:grid-cols-2 gap-8 max-w-5xl mx-auto mb-12">
 			<!-- Starter Plan -->
 			<div class="bg-white rounded-lg border-2 border-gray-200 p-8 relative">
 				<div class="mb-6">
@@ -278,35 +398,36 @@
 			</div>
 		</div>
 
-		<!-- Additional Information -->
-		<div class="max-w-5xl mx-auto">
-			<div class="grid md:grid-cols-3 gap-6 text-center">
-				<div class="flex flex-col items-center">
-					<div class="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mb-3">
-						<svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-						</svg>
+			<!-- Additional Information -->
+			<div class="max-w-5xl mx-auto">
+				<div class="grid md:grid-cols-3 gap-6 text-center">
+					<div class="flex flex-col items-center">
+						<div class="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mb-3">
+							<svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+							</svg>
+						</div>
+						<p class="text-sm text-gray-700 font-medium">Cancel anytime</p>
 					</div>
-					<p class="text-sm text-gray-700 font-medium">Cancel anytime</p>
-				</div>
-				<div class="flex flex-col items-center">
-					<div class="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mb-3">
-						<svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-						</svg>
+					<div class="flex flex-col items-center">
+						<div class="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mb-3">
+							<svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+							</svg>
+						</div>
+						<p class="text-sm text-gray-700 font-medium">No long-term contracts</p>
 					</div>
-					<p class="text-sm text-gray-700 font-medium">No long-term contracts</p>
-				</div>
-				<div class="flex flex-col items-center">
-					<div class="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mb-3">
-						<svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-						</svg>
+					<div class="flex flex-col items-center">
+						<div class="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mb-3">
+							<svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+							</svg>
+						</div>
+						<p class="text-sm text-gray-700 font-medium">Prices exclude VAT</p>
 					</div>
-					<p class="text-sm text-gray-700 font-medium">Prices exclude VAT</p>
 				</div>
 			</div>
-		</div>
+		{/if}
 	</main>
 </div>
 

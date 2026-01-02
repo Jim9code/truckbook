@@ -93,6 +93,12 @@ export const api = {
           return apiRequest('/subscriptions/status');
         },
 
+        cancelSubscription: async () => {
+          return apiRequest('/subscriptions', {
+            method: 'DELETE'
+          });
+        },
+
         // Trucks
         getTrucks: async (searchQuery = '') => {
           const query = searchQuery ? `?search=${encodeURIComponent(searchQuery)}` : '';
