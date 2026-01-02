@@ -31,7 +31,22 @@ export const getTrucks = async (req, res) => {
 export const addTruck = async (req, res) => {
   try {
     const userId = req.userId;
+    const planType = req.planType; // Get plan type from middleware
     const { name, plateNumber, driverName } = req.body;
+
+    // Check truck limit for Starter plan (5 trucks max)
+    if (planType === 'starter') {
+      const { getUserTrucks } = await import('../services/truckService.js');
+      const existingTrucks = await getUserTrucks(userId);
+      
+      if (existingTrucks.length >= 5) {
+        return res.status(403).json({
+          success: false,
+          message: 'Starter plan is limited to 5 trucks. Please upgrade to Large Fleet plan for unlimited trucks.',
+          requiresUpgrade: true
+        });
+      }
+    }
 
     const truck = await createTruck(userId, { name, plateNumber, driverName });
 

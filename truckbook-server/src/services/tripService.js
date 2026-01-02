@@ -2,22 +2,55 @@ import { getModels } from '../utils/models.js';
 import { findOrCreateCustomer } from './customerService.js';
 
 // Get all trips for a user with filters
-export const getUserTrips = async (userId, filters = {}) => {
+export const getUserTrips = async (userId, filters = {}, planType = null) => {
   const { Trip, Truck, Driver, Customer } = await getModels();
   const { Op } = await import('sequelize');
   
   const whereClause = { userId };
   
-  // Date filter
-  if (filters.date) {
-    whereClause.date = filters.date;
-  } else if (filters.dateFrom || filters.dateTo) {
-    whereClause.date = {};
-    if (filters.dateFrom) {
-      whereClause.date[Op.gte] = filters.dateFrom;
+  // Starter plan: Limit to 3 months of historical data
+  if (planType === 'starter') {
+    const threeMonthsAgo = new Date();
+    threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
+    threeMonthsAgo.setHours(0, 0, 0, 0);
+    
+    // If no date filter specified, apply 3-month limit
+    if (!filters.date && !filters.dateFrom && !filters.dateTo) {
+      whereClause.date = {
+        [Op.gte]: threeMonthsAgo.toISOString().split('T')[0]
+      };
+    } else if (filters.dateFrom) {
+      // If dateFrom is provided, ensure it's not older than 3 months
+      const dateFrom = new Date(filters.dateFrom);
+      const effectiveDateFrom = dateFrom < threeMonthsAgo ? threeMonthsAgo : dateFrom;
+      whereClause.date = {
+        [Op.gte]: effectiveDateFrom.toISOString().split('T')[0]
+      };
+      if (filters.dateTo) {
+        whereClause.date[Op.lte] = filters.dateTo;
+      }
+    } else if (filters.date) {
+      // If single date filter, check if it's within 3 months
+      const filterDate = new Date(filters.date);
+      if (filterDate >= threeMonthsAgo) {
+        whereClause.date = filters.date;
+      } else {
+        // Date is older than 3 months, return empty result
+        return [];
+      }
     }
-    if (filters.dateTo) {
-      whereClause.date[Op.lte] = filters.dateTo;
+  } else {
+    // Large Fleet: No date limit, use filters as provided
+    if (filters.date) {
+      whereClause.date = filters.date;
+    } else if (filters.dateFrom || filters.dateTo) {
+      whereClause.date = {};
+      if (filters.dateFrom) {
+        whereClause.date[Op.gte] = filters.dateFrom;
+      }
+      if (filters.dateTo) {
+        whereClause.date[Op.lte] = filters.dateTo;
+      }
     }
   }
   
@@ -359,22 +392,63 @@ export const deleteTrip = async (tripId, userId) => {
 };
 
 // Get trip statistics for dashboard
-export const getTripStatistics = async (userId, filters = {}) => {
+export const getTripStatistics = async (userId, filters = {}, planType = null) => {
   const { Trip } = await getModels();
   const { Op } = await import('sequelize');
   
   const whereClause = { userId };
   
-  // Apply same filters as getUserTrips
-  if (filters.date) {
-    whereClause.date = filters.date;
-  } else if (filters.dateFrom || filters.dateTo) {
-    whereClause.date = {};
-    if (filters.dateFrom) {
-      whereClause.date[Op.gte] = filters.dateFrom;
+  // Starter plan: Limit to 3 months of historical data (same logic as getUserTrips)
+  if (planType === 'starter') {
+    const threeMonthsAgo = new Date();
+    threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
+    threeMonthsAgo.setHours(0, 0, 0, 0);
+    
+    // If no date filter specified, apply 3-month limit
+    if (!filters.date && !filters.dateFrom && !filters.dateTo) {
+      whereClause.date = {
+        [Op.gte]: threeMonthsAgo.toISOString().split('T')[0]
+      };
+    } else if (filters.dateFrom) {
+      // If dateFrom is provided, ensure it's not older than 3 months
+      const dateFrom = new Date(filters.dateFrom);
+      const effectiveDateFrom = dateFrom < threeMonthsAgo ? threeMonthsAgo : dateFrom;
+      whereClause.date = {
+        [Op.gte]: effectiveDateFrom.toISOString().split('T')[0]
+      };
+      if (filters.dateTo) {
+        whereClause.date[Op.lte] = filters.dateTo;
+      }
+    } else if (filters.date) {
+      // If single date filter, check if it's within 3 months
+      const filterDate = new Date(filters.date);
+      if (filterDate < threeMonthsAgo) {
+        // Date is older than 3 months, return empty stats
+        return {
+          totalTrips: 0,
+          totalRevenue: 0,
+          totalCost: 0,
+          totalProfit: 0,
+          activeTrips: 0,
+          completedTrips: 0
+        };
+      } else {
+        whereClause.date = filters.date;
+      }
     }
-    if (filters.dateTo) {
-      whereClause.date[Op.lte] = filters.dateTo;
+  } else {
+    // Large Fleet: No date limit, use filters as provided
+    // Apply same filters as getUserTrips
+    if (filters.date) {
+      whereClause.date = filters.date;
+    } else if (filters.dateFrom || filters.dateTo) {
+      whereClause.date = {};
+      if (filters.dateFrom) {
+        whereClause.date[Op.gte] = filters.dateFrom;
+      }
+      if (filters.dateTo) {
+        whereClause.date[Op.lte] = filters.dateTo;
+      }
     }
   }
   

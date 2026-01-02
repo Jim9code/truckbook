@@ -28,7 +28,8 @@ export const getTrips = async (req, res) => {
     if (driver) filters.driver = driver;
     if (status) filters.status = status;
 
-    const trips = await getUserTrips(userId, filters);
+    const planType = req.planType; // Get plan type from middleware
+    const trips = await getUserTrips(userId, filters, planType);
 
     res.json({
       success: true,
@@ -61,7 +62,8 @@ export const getStats = async (req, res) => {
     if (dateTo) filters.dateTo = dateTo;
     if (status) filters.status = status;
 
-    const stats = await getTripStatistics(userId, filters);
+    const planType = req.planType; // Get plan type from middleware
+    const stats = await getTripStatistics(userId, filters, planType);
 
     res.json({
       success: true,

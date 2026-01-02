@@ -4,7 +4,17 @@ import { exportTripsToExcel, exportTripsToPDF, exportTrucksToExcel, exportTrucks
 export const exportTrips = async (req, res) => {
   try {
     const userId = req.userId;
+    const planType = req.planType; // Get plan type from middleware
     const { format, date, dateFrom, dateTo, truck, driver, status } = req.query;
+
+    // Export is only available for Large Fleet plan
+    if (planType !== 'large-fleet') {
+      return res.status(403).json({
+        success: false,
+        message: 'Export reports are only available for Large Fleet plan. Please upgrade to access this feature.',
+        requiresUpgrade: true
+      });
+    }
 
     // Validate format
     if (!format || !['excel', 'pdf'].includes(format.toLowerCase())) {
@@ -58,7 +68,17 @@ export const exportTrips = async (req, res) => {
 export const exportTrucks = async (req, res) => {
   try {
     const userId = req.userId;
+    const planType = req.planType; // Get plan type from middleware
     const { format } = req.query;
+
+    // Export is only available for Large Fleet plan
+    if (planType !== 'large-fleet') {
+      return res.status(403).json({
+        success: false,
+        message: 'Export reports are only available for Large Fleet plan. Please upgrade to access this feature.',
+        requiresUpgrade: true
+      });
+    }
 
     // Validate format
     if (!format || !['excel', 'pdf'].includes(format.toLowerCase())) {

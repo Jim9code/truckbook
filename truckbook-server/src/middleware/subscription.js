@@ -25,6 +25,8 @@ export const requireSubscription = async (req, res, next) => {
 
     // Attach subscription to request for use in controllers
     req.subscription = subscriptionStatus.subscription;
+    // Attach plan type for easy access
+    req.planType = subscriptionStatus.subscription?.planType || null;
 
     next();
   } catch (error) {

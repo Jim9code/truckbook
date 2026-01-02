@@ -214,25 +214,7 @@
 						<svg class="w-5 h-5 text-blue-600 mr-2 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
 						</svg>
-						<span class="text-gray-700 text-sm">Advanced profit breakdown (per truck, driver, customer, route)</span>
-					</li>
-					<li class="flex items-start">
-						<svg class="w-5 h-5 text-blue-600 mr-2 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-						</svg>
 						<span class="text-gray-700 text-sm">Full maintenance history per truck</span>
-					</li>
-					<li class="flex items-start">
-						<svg class="w-5 h-5 text-blue-600 mr-2 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-						</svg>
-						<span class="text-gray-700 text-sm">Cost trends & high-maintenance truck visibility</span>
-					</li>
-					<li class="flex items-start">
-						<svg class="w-5 h-5 text-blue-600 mr-2 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-						</svg>
-						<span class="text-gray-700 text-sm">Advanced reports</span>
 					</li>
 					<li class="flex items-start">
 						<svg class="w-5 h-5 text-blue-600 mr-2 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -245,6 +227,30 @@
 							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
 						</svg>
 						<span class="text-gray-700 text-sm">Full historical records (no limit)</span>
+					</li>
+					<li class="flex items-start">
+						<svg class="w-5 h-5 text-blue-600 mr-2 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+						</svg>
+						<span class="text-gray-700 text-sm">Profit & loss per trip</span>
+					</li>
+					<li class="flex items-start">
+						<svg class="w-5 h-5 text-blue-600 mr-2 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+						</svg>
+						<span class="text-gray-700 text-sm">Outstanding customer payment tracking</span>
+					</li>
+					<li class="flex items-start">
+						<svg class="w-5 h-5 text-blue-600 mr-2 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+						</svg>
+						<span class="text-gray-700 text-sm">Split payments supported (advance + balance)</span>
+					</li>
+					<li class="flex items-start">
+						<svg class="w-5 h-5 text-blue-600 mr-2 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+						</svg>
+						<span class="text-gray-700 text-sm">Basic reports (Total revenue, expenses, profit)</span>
 					</li>
 				</ul>
 
