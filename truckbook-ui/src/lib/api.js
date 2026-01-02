@@ -88,6 +88,13 @@ export const api = {
     });
   },
 
+  resetPassword: async (token, newPassword) => {
+    return apiRequest('/auth/reset-password', {
+      method: 'POST',
+      body: JSON.stringify({ token, newPassword })
+    });
+  },
+
   // Subscription endpoints
   subscribe: async (planType) => {
     return apiRequest('/subscriptions', {
