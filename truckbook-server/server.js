@@ -72,7 +72,7 @@ const startServer = async () => {
     // Use { force: true } to drop and recreate tables (DANGEROUS - only for development)
     // Use { alter: true } to alter tables to match models (safer)
     // Changed to false to avoid MySQL index limit errors
-    await sequelize.sync({ alter: false });
+    await sequelize.sync({ alter: true });
     console.log('✅ Database synced successfully.');
 
     app.listen(PORT, () => {
