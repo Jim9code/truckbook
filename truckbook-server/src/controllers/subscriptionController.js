@@ -80,8 +80,18 @@ export const subscribe = async (req, res) => {
 
     const flutterwaveData = flutterwaveResult.data;
     
-    // Extract tx_ref from the response (it's stored in the data object we return)
+    // Extract subscription ID and tx_ref from the response
+    // NOW we have the REAL subscription ID immediately!
+    const subscriptionId = flutterwaveData.subscriptionId || flutterwaveData.id || null;
     const txRef = flutterwaveData.tx_ref || null;
+
+    if (!subscriptionId) {
+      console.error('No subscription ID in Flutterwave response:', flutterwaveData);
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to get subscription ID from Flutterwave'
+      });
+    }
 
     if (!txRef) {
       console.error('No tx_ref in Flutterwave response:', flutterwaveData);
@@ -91,14 +101,15 @@ export const subscribe = async (req, res) => {
       });
     }
 
-    // Create subscription in database
-    // Note: We don't have subscription ID yet - Flutterwave creates it after payment
-    // We'll update it via webhook using tx_ref
+    console.log('✅ Creating subscription in database with subscription ID:', subscriptionId);
+
+    // Create subscription in database WITH subscription ID immediately
+    // This is now a REAL subscription, so we have the ID upfront
     const subscription = await createSubscription(userId, planType, {
-      subscriptionId: null, // Will be updated by webhook after payment
+      subscriptionId: subscriptionId.toString(), // REAL subscription ID!
       planId: flutterwavePlanId,
-      paymentReference: txRef, // Store tx_ref for webhook lookup
-      nextPaymentDate: null // Will be set by webhook
+      paymentReference: txRef,
+      nextPaymentDate: null // Will be set by webhook after payment
     });
 
     res.status(201).json({
@@ -107,7 +118,8 @@ export const subscribe = async (req, res) => {
       data: {
         subscription,
         paymentLink: flutterwaveData.link || null,
-        authorizationUrl: flutterwaveData.authorization?.authorization_url || null
+        authorizationUrl: flutterwaveData.authorization?.authorization_url || null,
+        subscriptionId: subscriptionId.toString() // Include in response for debugging
       }
     });
   } catch (error) {

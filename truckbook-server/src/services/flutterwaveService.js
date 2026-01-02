@@ -17,16 +17,10 @@ export const getFlutterwavePlanId = (planType) => {
   return planMap[planType];
 };
 
-// Create subscription in Flutterwave (using Standard Payments with subscription plan)
+// Create subscription in Flutterwave using proper Subscriptions API
+// This creates a REAL subscription object (not just a recurring payment)
 export const createFlutterwaveSubscription = async (userData, planId) => {
   try {
-    // Generate a unique transaction reference
-    const txRef = `TRUCKBOOKS-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-    
-    // Log plan ID for debugging
-    console.log('Creating payment with plan ID:', planId);
-    console.log('Plan ID type:', typeof planId);
-    
     // Convert planId to integer if it's a string
     const planIdInt = typeof planId === 'string' ? parseInt(planId, 10) : planId;
     
@@ -34,13 +28,60 @@ export const createFlutterwaveSubscription = async (userData, planId) => {
     if (!planIdInt || isNaN(planIdInt)) {
       throw new Error(`Invalid plan ID: ${planId}`);
     }
+
+    console.log('Creating Flutterwave subscription with plan ID:', planIdInt);
+    console.log('Customer:', { email: userData.email, name: userData.fullName || userData.companyName });
+
+    // Step 1: Create subscription explicitly using Flutterwave Subscriptions API
+    // This creates a REAL subscription object, not just a recurring payment
+    const subscriptionPayload = {
+      customer: {
+        email: userData.email,
+        phone_number: userData.phone || null,
+        name: userData.fullName || userData.companyName || userData.email
+      },
+      plan: planIdInt // Payment plan ID
+    };
+
+    // Create subscription using Flutterwave Subscriptions API
+    const subscriptionResponse = await axios.post(
+      'https://api.flutterwave.com/v3/subscriptions',
+      subscriptionPayload,
+      {
+        headers: {
+          'Authorization': `Bearer ${process.env.FLUTTERWAVE_SECRET_KEY}`,
+          'Content-Type': 'application/json'
+        }
+      }
+    );
+
+    if (subscriptionResponse.data.status !== 'success') {
+      console.error('Flutterwave subscription creation failed:', subscriptionResponse.data);
+      return {
+        success: false,
+        message: subscriptionResponse.data.message || 'Failed to create subscription'
+      };
+    }
+
+    const subscriptionData = subscriptionResponse.data.data;
+    const subscriptionId = subscriptionData.id;
+
+    console.log('✅ Subscription created successfully with ID:', subscriptionId);
+
+    // Step 2: Get payment authorization link for the subscription
+    // Flutterwave subscriptions need to be activated with a payment
+    // We need to create a payment authorization for the first charge
     
-    const payload = {
+    // Generate a unique transaction reference
+    const txRef = `TRUCKBOOKS-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+
+    // Create payment authorization for the subscription
+    const paymentPayload = {
       tx_ref: txRef,
-      amount: userData.amount.toString(), // Ensure amount is string
+      amount: userData.amount.toString(),
       currency: 'NGN',
       payment_options: 'card,account,banktransfer,ussd',
-      redirect_url: `${process.env.FRONTEND_URL || 'http://localhost:5173'}/subscription/callback?tx_ref=${txRef}`,
+      redirect_url: `${process.env.FRONTEND_URL || 'http://localhost:5173'}/subscription/callback?tx_ref=${txRef}&subscription_id=${subscriptionId}`,
       customer: {
         email: userData.email,
         name: userData.fullName || userData.companyName || userData.email
@@ -49,20 +90,16 @@ export const createFlutterwaveSubscription = async (userData, planId) => {
         title: `${userData.companyName || 'TruckBooks'} - Subscription`,
         description: `Monthly subscription for ${userData.companyName || 'your company'}`
       },
-      // Include payment plan for subscription - use integer
-      payment_plan: planIdInt
+      // Link this payment to the subscription
+      meta: {
+        subscription_id: subscriptionId.toString()
+      }
     };
 
-    // Log payload for debugging (without sensitive data)
-    console.log('Payment payload:', {
-      ...payload,
-      customer: { email: payload.customer.email, name: payload.customer.name }
-    });
-
-    // Use Flutterwave Standard Payments API (supports payment_plan)
-    const response = await axios.post(
+    // Create payment link for subscription activation
+    const paymentResponse = await axios.post(
       'https://api.flutterwave.com/v3/payments',
-      payload,
+      paymentPayload,
       {
         headers: {
           'Authorization': `Bearer ${process.env.FLUTTERWAVE_SECRET_KEY}`,
@@ -70,27 +107,48 @@ export const createFlutterwaveSubscription = async (userData, planId) => {
         }
       }
     );
-    
-    if (response.data.status === 'success') {
-      return {
-        success: true,
-        data: {
-          id: response.data.data.id,
-          link: response.data.data.link, // This is the payment URL to redirect user to
-          tx_ref: txRef,
-          ...response.data.data
-        }
-      };
-    } else {
-      // Log full error for debugging
-      console.error('Flutterwave API Error:', JSON.stringify(response.data, null, 2));
+
+    if (paymentResponse.data.status !== 'success') {
+      console.error('Failed to create payment link for subscription:', paymentResponse.data);
+      // Try to cancel the subscription we just created
+      try {
+        await axios.put(
+          `https://api.flutterwave.com/v3/subscriptions/${subscriptionId}/cancel`,
+          {},
+          {
+            headers: {
+              'Authorization': `Bearer ${process.env.FLUTTERWAVE_SECRET_KEY}`,
+              'Content-Type': 'application/json'
+            }
+          }
+        );
+        console.log('✅ Cancelled subscription after payment link creation failed');
+      } catch (cancelError) {
+        console.error('Failed to cancel subscription after payment link creation failed:', cancelError);
+      }
+
       return {
         success: false,
-        message: response.data.message || 'Failed to create subscription payment link'
+        message: paymentResponse.data.message || 'Failed to create payment link'
       };
     }
+
+    const paymentData = paymentResponse.data.data;
+
+    console.log('✅ Payment link created for subscription:', subscriptionId);
+    console.log('Transaction reference:', txRef);
+
+    return {
+      success: true,
+      data: {
+        subscriptionId: subscriptionId.toString(), // REAL subscription ID!
+        id: subscriptionId,
+        link: paymentData.link || paymentData.authorization?.authorization_url,
+        tx_ref: txRef,
+        ...paymentData
+      }
+    };
   } catch (error) {
-    // Enhanced error logging
     console.error('Flutterwave subscription creation error:', error.message);
     if (error.response) {
       console.error('Status:', error.response.status);
@@ -250,6 +308,30 @@ export const getSubscriptionIdByTxRef = async (txRef, customerEmail = null, paym
       success: false,
       message: error.response?.data?.message || error.message || 'Error fetching subscription ID'
     };
+  }
+};
+
+// List all subscriptions for a customer (for debugging)
+export const listFlutterwaveSubscriptions = async (email) => {
+  try {
+    const response = await axios.get(
+      `https://api.flutterwave.com/v3/subscriptions?email=${encodeURIComponent(email)}`,
+      {
+        headers: {
+          'Authorization': `Bearer ${process.env.FLUTTERWAVE_SECRET_KEY}`,
+          'Content-Type': 'application/json'
+        }
+      }
+    );
+    
+    if (response.data.status === 'success') {
+      const subscriptions = response.data.data;
+      return Array.isArray(subscriptions) ? subscriptions : [subscriptions];
+    }
+    return [];
+  } catch (error) {
+    console.error('Error listing Flutterwave subscriptions:', error);
+    return [];
   }
 };
 
