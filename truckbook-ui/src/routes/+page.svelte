@@ -242,7 +242,7 @@
 	</section>
 
 	<!-- CTA Section -->
-	<section class="py-16 bg-blue-600">
+	<section class="py-16 bg-gradient-to-r from-blue-600 to-orange-500">
 		<div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
 			<h2 class="text-3xl font-bold text-white mb-4">Ready to streamline your operations?</h2>
 			<p class="text-xl text-blue-100 mb-8">
@@ -270,13 +270,7 @@
 		<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
 			<div class="text-center">
 				<div class="flex items-center justify-center gap-2 mb-4">
-					<div class="w-8 h-8 bg-blue-600 rounded flex items-center justify-center">
-						<svg class="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 20 20">
-							<path d="M8 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0zM15 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0z" />
-							<path d="M3 4a1 1 0 00-1 1v10a1 1 0 001 1h1.05a2.5 2.5 0 014.9 0H10a1 1 0 001-1V5a1 1 0 00-1-1H3zM14 7a1 1 0 00-1 1v6.05A2.5 2.5 0 0115.95 16H17a1 1 0 001-1v-5a1 1 0 00-.293-.707l-2-2A1 1 0 0015 7h-1z" />
-						</svg>
-					</div>
-					<span class="text-xl font-bold text-black">TruckBooks</span>
+					<img src={logo} alt="TruckBooks" class="h-12 w-auto" />
 				</div>
 				<p class="text-sm text-gray-500">© 2024 TruckBooks Inc. All rights reserved.</p>
 			</div>
