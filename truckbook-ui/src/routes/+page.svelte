@@ -18,6 +18,7 @@
 
 				<!-- Auth Buttons -->
 				<div class="flex items-center gap-4">
+					<a href="/subscription" class="text-gray-700 hover:text-gray-900 font-medium">Pricing</a>
 					<button
 						on:click={() => goto('/login')}
 						class="text-gray-700 hover:text-gray-900 font-medium"

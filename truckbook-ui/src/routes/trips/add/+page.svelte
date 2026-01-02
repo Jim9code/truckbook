@@ -309,6 +309,7 @@
 					<a href="/trips" class="text-blue-600 font-medium border-b-2 border-blue-600 pb-1">Trips</a>
 					<a href="/trucks" class="text-gray-700 hover:text-gray-900">Trucks</a>
 					<a href="/outstanding-payments" class="text-gray-700 hover:text-gray-900">Outstanding Payments</a>
+					<a href="/subscription" class="text-gray-700 hover:text-gray-900">Pricing</a>
 					<a href="/getting-started" class="text-gray-700 hover:text-gray-900">Help</a>
 				</div>
 			</div>

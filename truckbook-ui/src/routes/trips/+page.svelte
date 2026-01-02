@@ -253,6 +253,8 @@
 					<a href="/trips" class="text-blue-600 font-medium border-b-2 border-blue-600 pb-1">Trips</a>
 					<a href="/trucks" class="text-gray-700 hover:text-gray-900">Trucks</a>
 					<a href="/outstanding-payments" class="text-gray-700 hover:text-gray-900">Outstanding Payments</a>
+					<a href="/subscription" class="text-gray-700 hover:text-gray-900">Pricing</a>
+					<a href="/getting-started" class="text-gray-700 hover:text-gray-900">Help</a>
 					<button
 						on:click={handleLogout}
 						class="bg-red-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-red-700 transition-colors"
