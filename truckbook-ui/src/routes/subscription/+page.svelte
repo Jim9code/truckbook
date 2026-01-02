@@ -65,7 +65,7 @@
 			if (response.success) {
 				// Reload subscription status
 				await loadSubscriptionStatus();
-				alert('Subscription cancelled successfully');
+				alert(response.message || 'Subscription cancelled successfully. You will retain access until the end of your current billing period.');
 			}
 		} catch (error) {
 			console.error('Error cancelling subscription:', error);
@@ -124,7 +124,11 @@
 						<div class="grid md:grid-cols-2 gap-4 text-sm">
 							<div>
 								<p class="text-gray-500 mb-1">Status</p>
-								<p class="font-semibold text-green-600 capitalize">{subscriptionStatus.subscription.status}</p>
+								{#if subscriptionStatus.subscription.cancelled}
+									<p class="font-semibold text-orange-600">Cancelled - Expires {new Date(subscriptionStatus.subscription.endDate).toLocaleDateString('en-NG')}</p>
+								{:else}
+									<p class="font-semibold text-green-600 capitalize">{subscriptionStatus.subscription.status}</p>
+								{/if}
 							</div>
 							<div>
 								<p class="text-gray-500 mb-1">Start Date</p>
@@ -150,13 +154,22 @@
 					</div>
 
 					<div class="flex gap-4">
-						<button
-							on:click={handleCancelSubscription}
-							disabled={isCancelling}
-							class="flex-1 bg-red-600 text-white py-3 rounded-lg font-medium hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-						>
-							{isCancelling ? 'Cancelling...' : 'Cancel Subscription'}
-						</button>
+						{#if subscriptionStatus.subscription.cancelled}
+							<button
+								disabled
+								class="flex-1 bg-gray-300 text-gray-600 py-3 rounded-lg font-medium cursor-not-allowed"
+							>
+								Already Cancelled
+							</button>
+						{:else}
+							<button
+								on:click={handleCancelSubscription}
+								disabled={isCancelling}
+								class="flex-1 bg-red-600 text-white py-3 rounded-lg font-medium hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+							>
+								{isCancelling ? 'Cancelling...' : 'Cancel Subscription'}
+							</button>
+						{/if}
 						<button
 							on:click={() => goto('/trips')}
 							class="flex-1 bg-gray-100 text-gray-900 py-3 rounded-lg font-medium hover:bg-gray-200 transition-colors"

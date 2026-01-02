@@ -305,16 +305,26 @@ export const cancelSubscriptionController = async (req, res) => {
 
       if (!flutterwaveResult.success) {
         console.error('Failed to cancel in Flutterwave:', flutterwaveResult.message);
-        // Continue with local cancellation even if Flutterwave fails
+        // Don't cancel locally if Flutterwave cancellation fails
+        return res.status(500).json({
+          success: false,
+          message: 'Failed to cancel subscription in Flutterwave. Please try again or contact support.',
+          error: process.env.NODE_ENV === 'development' ? flutterwaveResult.message : undefined
+        });
       }
+    } else {
+      // If no Flutterwave subscription ID, we can't cancel in Flutterwave
+      // This might be a pending subscription that hasn't been activated yet
+      console.warn('No Flutterwave subscription ID found for subscription:', subscription.id);
     }
 
-    // Cancel in database
+    // Only cancel locally if Flutterwave cancellation succeeded (or no Flutterwave ID exists)
+    // This sets cancelled: true but keeps status as 'active' until endDate
     const cancelledSubscription = await cancelSubscription(userId);
 
     res.json({
       success: true,
-      message: 'Subscription cancelled successfully',
+      message: 'Subscription cancelled successfully. You will retain access until the end of your current billing period.',
       data: {
         subscription: cancelledSubscription
       }

@@ -73,11 +73,13 @@ export const getActiveSubscription = async (userId) => {
   const endDate = new Date(subscription.endDate);
 
   if (endDate < today) {
-    // Update status to expired
-    await subscription.update({ status: 'expired' });
+    // Update status to expired (or inactive if cancelled)
+    const newStatus = subscription.cancelled ? 'inactive' : 'expired';
+    await subscription.update({ status: newStatus });
     return null;
   }
 
+  // Return subscription even if cancelled (user still has access until endDate)
   return subscription.toJSON();
 };
 
@@ -175,8 +177,12 @@ export const cancelSubscription = async (userId) => {
     throw new Error('No active subscription found');
   }
 
-  // Update status to inactive
-  await subscription.update({ status: 'inactive' });
+  // Mark as cancelled but keep status as 'active' until endDate
+  // This allows user to continue using the service until their paid period ends
+  await subscription.update({ 
+    cancelled: true
+    // Keep status as 'active' - it will become inactive after endDate
+  });
 
   return subscription.toJSON();
 };

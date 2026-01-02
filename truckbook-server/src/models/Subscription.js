@@ -57,6 +57,11 @@ export default (sequelize) => {
       type: DataTypes.DATEONLY,
       allowNull: true,
       field: 'next_payment_date'
+    },
+    cancelled: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false,
+      allowNull: false
     }
   }, {
     tableName: 'subscriptions',
