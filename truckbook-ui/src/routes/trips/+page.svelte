@@ -15,6 +15,9 @@
 	// User/Company data
 	let companyName = '';
 	let planType = null; // Store plan type for gating
+	
+	// Welcome banner state
+	let showWelcomeBanner = false;
 
 	// Trips data from API
 	let trips = [];
@@ -119,8 +122,44 @@
 			selectedTruck = decodeURIComponent(truckParam);
 		}
 		
+		// Check if welcome banner was already dismissed
+		if (typeof window !== 'undefined') {
+			const dismissed = localStorage.getItem('truckbooks_welcome_dismissed');
+			if (dismissed !== 'true') {
+				// Will be set based on trips count after loading
+			}
+		}
+		
 		await Promise.all([loadTrips(), loadStats(), loadUserData()]);
+		
+		// Show welcome banner if user has no trips and hasn't dismissed it
+		if (typeof window !== 'undefined') {
+			const dismissed = localStorage.getItem('truckbooks_welcome_dismissed');
+			if (dismissed !== 'true' && trips.length === 0) {
+				showWelcomeBanner = true;
+			}
+		}
 	});
+	
+	// Check if user is new (no trips) - reactive
+	$: {
+		if (typeof window !== 'undefined' && !isLoading) {
+			const dismissed = localStorage.getItem('truckbooks_welcome_dismissed');
+			if (dismissed !== 'true' && trips.length === 0) {
+				showWelcomeBanner = true;
+			} else if (trips.length > 0) {
+				showWelcomeBanner = false;
+			}
+		}
+	}
+	
+	function dismissWelcomeBanner() {
+		showWelcomeBanner = false;
+		// Store in localStorage so it doesn't show again
+		if (typeof window !== 'undefined') {
+			localStorage.setItem('truckbooks_welcome_dismissed', 'true');
+		}
+	}
 
 	// Summary calculations (use stats from API)
 	$: totalRevenue = stats.totalRevenue || 0;
@@ -227,6 +266,34 @@
 
 	<!-- Main Content -->
 	<main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+		{#if showWelcomeBanner}
+			<!-- Welcome Banner -->
+			<div class="bg-blue-600 text-white py-4 mb-6 rounded-lg">
+				<div class="flex items-center justify-between">
+					<div class="flex items-center gap-4">
+						<div class="flex-shrink-0">
+							<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+							</svg>
+						</div>
+						<div>
+							<p class="font-semibold">Welcome to TruckBooks! 👋</p>
+							<p class="text-sm text-blue-100">New here? Check out our <a href="/getting-started" class="underline font-medium hover:text-white">Getting Started Guide</a> to learn how to use the platform.</p>
+						</div>
+					</div>
+					<button
+						on:click={dismissWelcomeBanner}
+						class="flex-shrink-0 text-blue-100 hover:text-white transition-colors ml-4"
+						title="Dismiss"
+					>
+						<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+						</svg>
+					</button>
+				</div>
+			</div>
+		{/if}
+		
 		<!-- Header -->
 		<div class="flex justify-between items-center mb-8">
 			<div>
