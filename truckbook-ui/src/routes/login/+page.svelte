@@ -1,6 +1,7 @@
 <script>
 	import { goto } from '$app/navigation';
 	import { api, setToken } from '$lib/api.js';
+	import logo from '$lib/assets/truckbooklogo.png';
 
 	let email = '';
 	let password = '';
@@ -61,13 +62,7 @@
 		<!-- Logo and App Name -->
 		<div class="text-center mb-8">
 			<div class="flex items-center justify-center gap-2 mb-2">
-				<div class="w-8 h-8 bg-blue-600 rounded flex items-center justify-center">
-					<svg class="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 20 20">
-						<path d="M8 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0zM15 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0z" />
-						<path d="M3 4a1 1 0 00-1 1v10a1 1 0 001 1h1.05a2.5 2.5 0 014.9 0H10a1 1 0 001-1V5a1 1 0 00-1-1H3zM14 7a1 1 0 00-1 1v6.05A2.5 2.5 0 0115.95 16H17a1 1 0 001-1v-5a1 1 0 00-.293-.707l-2-2A1 1 0 0015 7h-1z" />
-					</svg>
-				</div>
-				<h1 class="text-2xl font-bold text-black">TruckBooks</h1>
+				<img src={logo} alt="TruckBooks" class="h-16 w-auto" />
 			</div>
 			<p class="text-gray-500 text-sm">Manage your fleet finances efficiently.</p>
 		</div>
@@ -160,16 +155,6 @@
 					{/if}
 				</button>
 			</form>
-
-			<!-- Separator -->
-			<div class="relative my-6">
-				<div class="absolute inset-0 flex items-center">
-					<div class="w-full border-t border-gray-300"></div>
-				</div>
-				<div class="relative flex justify-center text-sm">
-					<span class="px-2 bg-white text-gray-500">OR CONTINUE WITH</span>
-				</div>
-			</div>
 
 			<!-- Signup Link -->
 			<p class="mt-6 text-center text-sm text-gray-600">
