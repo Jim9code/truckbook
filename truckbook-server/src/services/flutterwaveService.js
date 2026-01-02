@@ -159,9 +159,9 @@ export const getFlutterwaveSubscription = async (subscriptionId) => {
 };
 
 // Get subscription ID from transaction reference
-export const getSubscriptionIdByTxRef = async (txRef) => {
+export const getSubscriptionIdByTxRef = async (txRef, customerEmail = null, paymentPlanId = null) => {
   try {
-    // First, get the transaction details
+    // First, get the transaction details to get customer email and payment plan
     const transactionResponse = await axios.get(
       `https://api.flutterwave.com/v3/transactions?tx_ref=${txRef}`,
       {
@@ -177,10 +177,12 @@ export const getSubscriptionIdByTxRef = async (txRef) => {
         ? transactionResponse.data.data[0] 
         : transactionResponse.data.data;
       
+      // Get customer email and payment plan from transaction if not provided
+      const email = customerEmail || transaction?.customer?.email;
+      const planId = paymentPlanId || transaction?.paymentPlan;
+      
       // The subscription ID might be in the transaction data
-      const subscriptionId = transaction?.subscription_id || 
-                             transaction?.payment_plan?.id || // This might be plan ID, not subscription ID
-                             null;
+      const subscriptionId = transaction?.subscription_id || null;
       
       if (subscriptionId) {
         return {
@@ -188,11 +190,59 @@ export const getSubscriptionIdByTxRef = async (txRef) => {
           subscriptionId: subscriptionId.toString()
         };
       }
+      
+      // If subscription ID not in transaction, fetch from subscriptions API
+      if (email && planId) {
+        try {
+          console.log('Fetching subscriptions from Flutterwave API for email:', email, 'plan:', planId);
+          
+          // Fetch all subscriptions for this customer
+          const subscriptionsResponse = await axios.get(
+            `https://api.flutterwave.com/v3/subscriptions?email=${encodeURIComponent(email)}`,
+            {
+              headers: {
+                'Authorization': `Bearer ${process.env.FLUTTERWAVE_SECRET_KEY}`,
+                'Content-Type': 'application/json'
+              }
+            }
+          );
+          
+          if (subscriptionsResponse.data.status === 'success' && subscriptionsResponse.data.data) {
+            const subscriptions = Array.isArray(subscriptionsResponse.data.data) 
+              ? subscriptionsResponse.data.data 
+              : [subscriptionsResponse.data.data];
+            
+            console.log(`Found ${subscriptions.length} subscription(s) for customer`);
+            
+            // Find subscription matching the payment plan
+            const matchingSubscription = subscriptions.find(
+              sub => sub.plan && (sub.plan.id === parseInt(planId) || sub.plan.id.toString() === planId.toString())
+            );
+            
+            if (matchingSubscription && matchingSubscription.id) {
+              console.log('✅ Found matching subscription ID:', matchingSubscription.id);
+              return {
+                success: true,
+                subscriptionId: matchingSubscription.id.toString()
+              };
+            } else {
+              console.warn('⚠️  No subscription found matching payment plan:', planId);
+            }
+          }
+        } catch (subError) {
+          console.error('Error fetching subscriptions:', subError.message);
+          if (subError.response) {
+            console.error('Response data:', subError.response.data);
+          }
+        }
+      } else {
+        console.warn('⚠️  Missing email or payment plan ID. Cannot fetch subscription from API.');
+      }
     }
     
     return {
       success: false,
-      message: 'Subscription ID not found in transaction'
+      message: 'Subscription ID not found in transaction or subscriptions API'
     };
   } catch (error) {
     console.error('Error fetching subscription ID by tx_ref:', error);

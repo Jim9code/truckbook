@@ -216,23 +216,28 @@ export const handleWebhook = async (req, res) => {
           if (subscriptionId) {
             console.log('✅ Subscription activated for tx_ref:', txRef, 'with subscription ID:', subscriptionId);
           } else {
-            console.warn('⚠️  Subscription activated but subscription ID not found in webhook. Attempting to fetch from transaction...');
+            console.warn('⚠️  Subscription activated but subscription ID not found in webhook. Attempting to fetch from Flutterwave API...');
             
-            // Fallback: Try to fetch subscription ID from transaction
+            // Fallback: Try to fetch subscription ID from Flutterwave API
             try {
               const { getSubscriptionIdByTxRef } = await import('../services/flutterwaveService.js');
-              const txRefResult = await getSubscriptionIdByTxRef(txRef);
+              
+              // Get customer email and payment plan from payload
+              const customerEmail = payload.customer?.email || payload.data?.customer?.email;
+              const paymentPlanId = payload.paymentPlan || payload.data?.paymentPlan;
+              
+              const txRefResult = await getSubscriptionIdByTxRef(txRef, customerEmail, paymentPlanId);
               
               if (txRefResult.success && txRefResult.subscriptionId) {
                 await updateSubscriptionWithFlutterwave(subscription.id, {
                   subscriptionId: txRefResult.subscriptionId
                 });
-                console.log('✅ Successfully fetched and set subscription ID from transaction:', txRefResult.subscriptionId);
+                console.log('✅ Successfully fetched and set subscription ID from Flutterwave API:', txRefResult.subscriptionId);
               } else {
-                console.warn('⚠️  Could not fetch subscription ID from transaction. Will be set when subscription.create webhook arrives.');
+                console.warn('⚠️  Could not fetch subscription ID from Flutterwave API. Will be set when subscription.create webhook arrives.');
               }
             } catch (error) {
-              console.warn('⚠️  Error fetching subscription ID from transaction:', error.message);
+              console.warn('⚠️  Error fetching subscription ID from Flutterwave API:', error.message);
             }
           }
         } else {
