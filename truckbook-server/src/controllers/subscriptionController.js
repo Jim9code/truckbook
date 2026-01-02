@@ -79,19 +79,7 @@ export const subscribe = async (req, res) => {
     }
 
     const flutterwaveData = flutterwaveResult.data;
-    
-    // Extract subscription ID and tx_ref from the response
-    // NOW we have the REAL subscription ID immediately!
-    const subscriptionId = flutterwaveData.subscriptionId || flutterwaveData.id || null;
     const txRef = flutterwaveData.tx_ref || null;
-
-    if (!subscriptionId) {
-      console.error('No subscription ID in Flutterwave response:', flutterwaveData);
-      return res.status(500).json({
-        success: false,
-        message: 'Failed to get subscription ID from Flutterwave'
-      });
-    }
 
     if (!txRef) {
       console.error('No tx_ref in Flutterwave response:', flutterwaveData);
@@ -101,15 +89,13 @@ export const subscribe = async (req, res) => {
       });
     }
 
-    console.log('✅ Creating subscription in database with subscription ID:', subscriptionId);
-
-    // Create subscription in database WITH subscription ID immediately
-    // This is now a REAL subscription, so we have the ID upfront
+    // Create subscription in database
+    // Subscription ID will be null initially - will be set via webhook after payment
     const subscription = await createSubscription(userId, planType, {
-      subscriptionId: subscriptionId.toString(), // REAL subscription ID!
+      subscriptionId: null, // Will be set by webhook after successful payment
       planId: flutterwavePlanId,
       paymentReference: txRef,
-      nextPaymentDate: null // Will be set by webhook after payment
+      nextPaymentDate: null // Will be set by webhook
     });
 
     res.status(201).json({
@@ -230,23 +216,60 @@ export const handleWebhook = async (req, res) => {
           } else {
             console.warn('⚠️  Subscription activated but subscription ID not found in webhook. Attempting to fetch from Flutterwave API...');
             
-            // Fallback: Try to fetch subscription ID from Flutterwave API
+            // Enhanced fallback: Try multiple methods to get subscription ID
             try {
-              const { getSubscriptionIdByTxRef } = await import('../services/flutterwaveService.js');
+              const { getSubscriptionIdByTxRef, listFlutterwaveSubscriptions } = await import('../services/flutterwaveService.js');
               
               // Get customer email and payment plan from payload
               const customerEmail = payload.customer?.email || payload.data?.customer?.email;
               const paymentPlanId = payload.paymentPlan || payload.data?.paymentPlan;
               
+              // Method 1: Try to get by tx_ref
               const txRefResult = await getSubscriptionIdByTxRef(txRef, customerEmail, paymentPlanId);
               
               if (txRefResult.success && txRefResult.subscriptionId) {
                 await updateSubscriptionWithFlutterwave(subscription.id, {
                   subscriptionId: txRefResult.subscriptionId
                 });
-                console.log('✅ Successfully fetched and set subscription ID from Flutterwave API:', txRefResult.subscriptionId);
+                console.log('✅ Successfully fetched and set subscription ID from Flutterwave API (by tx_ref):', txRefResult.subscriptionId);
+              } else if (customerEmail) {
+                // Method 2: List all subscriptions for this customer and find matching one
+                console.log('Attempting to fetch subscription ID by listing customer subscriptions...');
+                const allSubs = await listFlutterwaveSubscriptions(customerEmail);
+                
+                if (allSubs && allSubs.length > 0) {
+                  // Find the most recent active subscription matching the plan
+                  const matchingSub = allSubs.find(sub => {
+                    const planMatches = sub.plan && (
+                      sub.plan.id === parseInt(paymentPlanId) || 
+                      sub.plan.id.toString() === paymentPlanId.toString()
+                    );
+                    const isActive = sub.status === 'active' || sub.status === 'ACTIVE';
+                    return planMatches && isActive;
+                  });
+                  
+                  if (matchingSub && matchingSub.id) {
+                    await updateSubscriptionWithFlutterwave(subscription.id, {
+                      subscriptionId: matchingSub.id.toString()
+                    });
+                    console.log('✅ Successfully fetched and set subscription ID from Flutterwave API (by listing):', matchingSub.id);
+                  } else {
+                    // Use the most recent subscription if no exact match
+                    const mostRecent = allSubs.sort((a, b) => new Date(b.created_at) - new Date(a.created_at))[0];
+                    if (mostRecent && mostRecent.id) {
+                      await updateSubscriptionWithFlutterwave(subscription.id, {
+                        subscriptionId: mostRecent.id.toString()
+                      });
+                      console.log('✅ Set subscription ID from most recent subscription:', mostRecent.id);
+                    } else {
+                      console.warn('⚠️  Could not find matching subscription in Flutterwave. Will be set when subscription.create webhook arrives.');
+                    }
+                  }
+                } else {
+                  console.warn('⚠️  No subscriptions found for customer. Will be set when subscription.create webhook arrives.');
+                }
               } else {
-                console.warn('⚠️  Could not fetch subscription ID from Flutterwave API. Will be set when subscription.create webhook arrives.');
+                console.warn('⚠️  Missing customer email. Cannot fetch subscription ID from Flutterwave API.');
               }
             } catch (error) {
               console.warn('⚠️  Error fetching subscription ID from Flutterwave API:', error.message);
