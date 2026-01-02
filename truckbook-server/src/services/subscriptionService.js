@@ -177,6 +177,11 @@ export const cancelSubscription = async (userId) => {
     throw new Error('No active subscription found');
   }
 
+  // Idempotency: If already cancelled, return success
+  if (subscription.cancelled) {
+    return subscription.toJSON();
+  }
+
   // Mark as cancelled but keep status as 'active' until endDate
   // This allows user to continue using the service until their paid period ends
   await subscription.update({ 

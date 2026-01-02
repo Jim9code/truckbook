@@ -255,14 +255,26 @@ export const handleWebhook = async (req, res) => {
 
       case 'subscription.disabled':
       case 'subscription.cancelled':
-        // Subscription cancelled/disabled
+        // Subscription cancelled/disabled - sync local state
         if (payload.subscription_id) {
-          const subscription = await getSubscriptionByFlutterwaveId(payload.subscription_id.toString());
+          const { Subscription } = await getModels();
+          const subscription = await Subscription.findOne({
+            where: {
+              flutterwaveSubscriptionId: payload.subscription_id.toString()
+            }
+          });
           
           if (subscription) {
-            await updateSubscriptionWithFlutterwave(subscription.id, {
-              status: 'inactive'
+            const today = new Date();
+            const endDate = new Date(subscription.endDate);
+            
+            // Mark as cancelled but keep active if still within billing period
+            await subscription.update({
+              cancelled: true,
+              status: endDate < today ? 'inactive' : 'active'
             });
+            
+            console.log('✅ Synced subscription cancellation from Flutterwave webhook');
           }
         }
         break;
@@ -297,36 +309,80 @@ export const cancelSubscriptionController = async (req, res) => {
       });
     }
 
-    // Cancel in Flutterwave if subscription ID exists
-    if (subscription.flutterwaveSubscriptionId) {
-      const flutterwaveResult = await cancelFlutterwaveSubscription(
-        subscription.flutterwaveSubscriptionId
-      );
-
-      if (!flutterwaveResult.success) {
-        console.error('Failed to cancel in Flutterwave:', flutterwaveResult.message);
-        // Don't cancel locally if Flutterwave cancellation fails
-        return res.status(500).json({
-          success: false,
-          message: 'Failed to cancel subscription in Flutterwave. Please try again or contact support.',
-          error: process.env.NODE_ENV === 'development' ? flutterwaveResult.message : undefined
-        });
-      }
-    } else {
-      // If no Flutterwave subscription ID, we can't cancel in Flutterwave
-      // This might be a pending subscription that hasn't been activated yet
-      console.warn('No Flutterwave subscription ID found for subscription:', subscription.id);
+    // Idempotency: If already cancelled, return success
+    if (subscription.cancelled) {
+      return res.json({
+        success: true,
+        message: 'Subscription is already cancelled. You will retain access until the end of your current billing period.',
+        data: {
+          subscription
+        }
+      });
     }
 
-    // Only cancel locally if Flutterwave cancellation succeeded (or no Flutterwave ID exists)
-    // This sets cancelled: true but keeps status as 'active' until endDate
+    let flutterwaveCancelled = false;
+    let flutterwaveError = null;
+
+    // Attempt to cancel in Flutterwave if subscription ID exists
+    if (subscription.flutterwaveSubscriptionId) {
+      try {
+        const flutterwaveResult = await cancelFlutterwaveSubscription(
+          subscription.flutterwaveSubscriptionId
+        );
+
+        if (flutterwaveResult.success) {
+          flutterwaveCancelled = true;
+          console.log('✅ Successfully cancelled Flutterwave subscription:', subscription.flutterwaveSubscriptionId);
+        } else {
+          flutterwaveError = flutterwaveResult.message;
+          
+          // Handle specific error cases gracefully
+          const errorMessage = flutterwaveResult.message?.toLowerCase() || '';
+          
+          if (errorMessage.includes('non existent') || 
+              errorMessage.includes('invalid subscription') ||
+              errorMessage.includes('not found')) {
+            // Subscription doesn't exist in Flutterwave - might be test data or already cancelled
+            console.warn('⚠️  Flutterwave subscription not found:', subscription.flutterwaveSubscriptionId);
+            console.warn('Proceeding with local cancellation. This might be test data or subscription was never properly created.');
+            // Allow local cancellation to proceed
+          } else if (errorMessage.includes('already cancelled') || 
+                     errorMessage.includes('already disabled')) {
+            // Already cancelled in Flutterwave - sync local state
+            console.log('ℹ️  Flutterwave subscription already cancelled. Syncing local state.');
+            flutterwaveCancelled = true; // Treat as success for sync
+          } else {
+            // Other errors - log but allow local cancellation as fallback
+            console.error('❌ Failed to cancel in Flutterwave:', flutterwaveError);
+            console.warn('⚠️  Proceeding with local cancellation as fallback. User should contact support if charges continue.');
+          }
+        }
+      } catch (error) {
+        // Network or unexpected errors
+        flutterwaveError = error.message;
+        console.error('❌ Error calling Flutterwave API:', error.message);
+        console.warn('⚠️  Proceeding with local cancellation as fallback.');
+      }
+    } else {
+      console.warn('⚠️  No Flutterwave subscription ID found. This might be a pending subscription.');
+    }
+
+    // Cancel locally (always proceed - graceful degradation)
     const cancelledSubscription = await cancelSubscription(userId);
+
+    // Determine response message based on Flutterwave result
+    let message = 'Subscription cancelled successfully. You will retain access until the end of your current billing period.';
+    
+    if (flutterwaveError && !flutterwaveCancelled) {
+      message += ' Note: There was an issue cancelling with the payment provider. If you continue to be charged, please contact support.';
+    }
 
     res.json({
       success: true,
-      message: 'Subscription cancelled successfully. You will retain access until the end of your current billing period.',
+      message,
       data: {
-        subscription: cancelledSubscription
+        subscription: cancelledSubscription,
+        flutterwaveCancelled // Include this so frontend can show appropriate message
       }
     });
   } catch (error) {
