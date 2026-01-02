@@ -4,6 +4,7 @@
 	import { onMount } from 'svelte';
 	import { api } from '$lib/api.js';
 	import logo from '$lib/assets/truckbooklogo.png';
+	import Toast from '$lib/components/Toast.svelte';
 
 	// Get token from query params
 	$: token = $page.url.searchParams.get('token') || null;
@@ -14,6 +15,15 @@
 	let showConfirmPassword = false;
 	let errors = {};
 	let isLoading = false;
+	let toastMessage = '';
+	let toastType = 'success';
+	let showToast = false;
+
+	function showToastMessage(message, type = 'success') {
+		toastMessage = message;
+		toastType = type;
+		showToast = true;
+	}
 
 	onMount(() => {
 		if (!token) {
@@ -54,8 +64,10 @@
 		try {
 			const response = await api.resetPassword(token, newPassword);
 			if (response.success) {
-				alert('Password reset successfully! Please login with your new password.');
-				goto('/login');
+				showToastMessage('Password reset successfully! Please login with your new password.', 'success');
+				setTimeout(() => {
+					goto('/login');
+				}, 2000);
 			}
 		} catch (error) {
 			console.error('Reset password error:', error);
@@ -65,6 +77,8 @@
 		}
 	}
 </script>
+
+<Toast bind:show={showToast} message={toastMessage} type={toastType} />
 
 <div class="min-h-screen bg-gray-50 flex items-center justify-center px-4 py-12">
 	<div class="w-full max-w-md">

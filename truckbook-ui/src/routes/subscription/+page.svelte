@@ -3,6 +3,8 @@
 	import { goto } from '$app/navigation';
 	import { api } from '$lib/api.js';
 	import logo from '$lib/assets/truckbooklogo.png';
+	import Toast from '$lib/components/Toast.svelte';
+	import ConfirmationModal from '$lib/components/ConfirmationModal.svelte';
 
 	let selectedPlan = 'large-fleet'; // Default to recommended plan
 	let isLoading = false;
@@ -10,6 +12,16 @@
 	let subscriptionStatus = null;
 	let isLoadingStatus = true;
 	let isCancelling = false;
+	let showCancelConfirm = false;
+	let toastMessage = '';
+	let toastType = 'success';
+	let showToast = false;
+
+	function showToastMessage(message, type = 'success') {
+		toastMessage = message;
+		toastType = type;
+		showToast = true;
+	}
 
 	onMount(async () => {
 		await loadSubscriptionStatus();
@@ -55,26 +67,45 @@
 	}
 
 	async function handleCancelSubscription() {
-		if (!confirm('Are you sure you want to cancel your subscription? You will lose access to all features after the current billing period.')) {
-			return;
-		}
-		
+		showCancelConfirm = true;
+	}
+
+	function confirmCancel() {
+		performCancel();
+	}
+
+	async function performCancel() {
 		isCancelling = true;
 		try {
 			const response = await api.cancelSubscription();
 			if (response.success) {
 				// Reload subscription status
 				await loadSubscriptionStatus();
-				alert(response.message || 'Subscription cancelled successfully. You will retain access until the end of your current billing period.');
+				showToastMessage(
+					response.message || 'Subscription cancelled successfully. You will retain access until the end of your current billing period.',
+					'success'
+				);
 			}
 		} catch (error) {
 			console.error('Error cancelling subscription:', error);
-			alert(error.message || 'Failed to cancel subscription. Please try again.');
+			showToastMessage(error.message || 'Failed to cancel subscription. Please try again.', 'error');
 		} finally {
 			isCancelling = false;
 		}
 	}
 </script>
+
+<Toast bind:show={showToast} message={toastMessage} type={toastType} />
+
+<ConfirmationModal
+	bind:show={showCancelConfirm}
+	title="Cancel Subscription"
+	message="Are you sure you want to cancel your subscription? You will lose access to all features after the current billing period."
+	confirmText="Yes, Cancel Subscription"
+	cancelText="Keep Subscription"
+	confirmClass="bg-red-600 hover:bg-red-700"
+	onConfirm={confirmCancel}
+/>
 
 <div class="min-h-screen bg-gray-50">
 	<!-- Navigation -->
