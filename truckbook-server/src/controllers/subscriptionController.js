@@ -187,13 +187,54 @@ export const handleWebhook = async (req, res) => {
         const subscription = await getSubscriptionByTxRef(txRef);
         
         if (subscription) {
+          // Try to extract subscription ID from various possible fields
+          // Flutterwave might send it in different places depending on webhook type
+          const subscriptionId = payload.data?.subscription_id || 
+                                payload.data?.id || 
+                                payload.subscription_id || 
+                                payload.id ||
+                                payload.data?.subscription?.id ||
+                                null;
+          
+          console.log('Payment webhook - attempting to extract subscription ID');
+          console.log('Available fields:', {
+            'payload.data.subscription_id': payload.data?.subscription_id,
+            'payload.data.id': payload.data?.id,
+            'payload.subscription_id': payload.subscription_id,
+            'payload.id': payload.id,
+            'payload.data.subscription.id': payload.data?.subscription?.id,
+            'payload.paymentPlan': payload.paymentPlan // This is the plan ID, not subscription ID
+          });
+          
           await updateSubscriptionWithFlutterwave(subscription.id, {
             status: 'active',
-            subscriptionId: payload.paymentPlan ? payload.paymentPlan.toString() : null,
+            subscriptionId: subscriptionId ? subscriptionId.toString() : null, // Use actual subscription ID, not paymentPlan
             paymentReference: txRef,
-            nextPaymentDate: payload.nextPaymentDate || null
+            nextPaymentDate: payload.nextPaymentDate || payload.data?.next_payment_date || null
           });
-          console.log('✅ Subscription activated for tx_ref:', txRef);
+          
+          if (subscriptionId) {
+            console.log('✅ Subscription activated for tx_ref:', txRef, 'with subscription ID:', subscriptionId);
+          } else {
+            console.warn('⚠️  Subscription activated but subscription ID not found in webhook. Attempting to fetch from transaction...');
+            
+            // Fallback: Try to fetch subscription ID from transaction
+            try {
+              const { getSubscriptionIdByTxRef } = await import('../services/flutterwaveService.js');
+              const txRefResult = await getSubscriptionIdByTxRef(txRef);
+              
+              if (txRefResult.success && txRefResult.subscriptionId) {
+                await updateSubscriptionWithFlutterwave(subscription.id, {
+                  subscriptionId: txRefResult.subscriptionId
+                });
+                console.log('✅ Successfully fetched and set subscription ID from transaction:', txRefResult.subscriptionId);
+              } else {
+                console.warn('⚠️  Could not fetch subscription ID from transaction. Will be set when subscription.create webhook arrives.');
+              }
+            } catch (error) {
+              console.warn('⚠️  Error fetching subscription ID from transaction:', error.message);
+            }
+          }
         } else {
           console.error('❌ Subscription not found for tx_ref:', txRef);
         }
@@ -212,8 +253,15 @@ export const handleWebhook = async (req, res) => {
 
       case 'subscription.create':
         // Subscription created - find by subscription ID or tx_ref
-        const subscriptionId = payload.subscription_id || payload.id;
-        const subscriptionTxRef = payload.txRef || payload.tx_ref;
+        const subscriptionId = payload.data?.subscription_id || 
+                              payload.data?.id || 
+                              payload.subscription_id || 
+                              payload.id ||
+                              payload.data?.subscription?.id ||
+                              null;
+        const subscriptionTxRef = payload.txRef || payload.tx_ref || payload.data?.tx_ref || payload.data?.txRef;
+        
+        console.log('subscription.create webhook - subscription ID:', subscriptionId, 'tx_ref:', subscriptionTxRef);
         
         let subscription = null;
         if (subscriptionId) {
@@ -230,11 +278,12 @@ export const handleWebhook = async (req, res) => {
             status: 'active',
             subscriptionId: subscriptionId ? subscriptionId.toString() : subscription.flutterwaveSubscriptionId,
             paymentReference: subscriptionTxRef || subscription.paymentReference,
-            nextPaymentDate: data.next_payment_date || data.nextPaymentDate || null
+            nextPaymentDate: payload.data?.next_payment_date || payload.nextPaymentDate || payload.data?.nextPaymentDate || null
           });
-          console.log('Subscription activated via subscription.create event');
+          console.log('✅ Subscription activated via subscription.create event with ID:', subscriptionId);
         } else {
-          console.error('Subscription not found for subscription.create event');
+          console.error('❌ Subscription not found for subscription.create event');
+          console.error('Searched for subscription ID:', subscriptionId, 'or tx_ref:', subscriptionTxRef);
         }
         break;
 

@@ -158,6 +158,51 @@ export const getFlutterwaveSubscription = async (subscriptionId) => {
   }
 };
 
+// Get subscription ID from transaction reference
+export const getSubscriptionIdByTxRef = async (txRef) => {
+  try {
+    // First, get the transaction details
+    const transactionResponse = await axios.get(
+      `https://api.flutterwave.com/v3/transactions?tx_ref=${txRef}`,
+      {
+        headers: {
+          'Authorization': `Bearer ${process.env.FLUTTERWAVE_SECRET_KEY}`,
+          'Content-Type': 'application/json'
+        }
+      }
+    );
+    
+    if (transactionResponse.data.status === 'success' && transactionResponse.data.data) {
+      const transaction = Array.isArray(transactionResponse.data.data) 
+        ? transactionResponse.data.data[0] 
+        : transactionResponse.data.data;
+      
+      // The subscription ID might be in the transaction data
+      const subscriptionId = transaction?.subscription_id || 
+                             transaction?.payment_plan?.id || // This might be plan ID, not subscription ID
+                             null;
+      
+      if (subscriptionId) {
+        return {
+          success: true,
+          subscriptionId: subscriptionId.toString()
+        };
+      }
+    }
+    
+    return {
+      success: false,
+      message: 'Subscription ID not found in transaction'
+    };
+  } catch (error) {
+    console.error('Error fetching subscription ID by tx_ref:', error);
+    return {
+      success: false,
+      message: error.response?.data?.message || error.message || 'Error fetching subscription ID'
+    };
+  }
+};
+
 // Cancel subscription in Flutterwave
 export const cancelFlutterwaveSubscription = async (subscriptionId) => {
   try {
