@@ -104,8 +104,8 @@ export const subscribe = async (req, res) => {
       data: {
         subscription,
         paymentLink: flutterwaveData.link || null,
-        authorizationUrl: flutterwaveData.authorization?.authorization_url || null,
-        subscriptionId: subscriptionId.toString() // Include in response for debugging
+        authorizationUrl: flutterwaveData.authorization?.authorization_url || null
+        // Note: subscriptionId will be set via webhook after successful payment
       }
     });
   } catch (error) {
