@@ -74,3 +74,56 @@ export const sendVerificationEmail = async (email, code, fullName) => {
   }
 };
 
+// Send password reset email
+export const sendPasswordResetEmail = async (email, resetToken, fullName) => {
+  try {
+    if (!apiInstance) {
+      throw new Error('Brevo API not configured. Please set BREVO_API_KEY in environment variables.');
+    }
+
+    const resetUrl = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/reset-password?token=${resetToken}`;
+
+    const sendSmtpEmail = new brevo.SendSmtpEmail();
+    
+    sendSmtpEmail.subject = 'Reset Your TruckBooks Password';
+    sendSmtpEmail.htmlContent = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <div style="background-color: #2563eb; padding: 20px; border-radius: 8px 8px 0 0; text-align: center;">
+          <h1 style="color: white; margin: 0;">TruckBooks</h1>
+        </div>
+        <div style="background-color: #ffffff; padding: 30px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 8px 8px;">
+          <h2 style="color: #111827; margin-top: 0;">Password Reset Request</h2>
+          <p style="color: #4b5563; font-size: 16px;">Hi ${fullName},</p>
+          <p style="color: #4b5563; font-size: 16px;">We received a request to reset your password. Click the button below to reset it:</p>
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="${resetUrl}" style="background-color: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: 600;">Reset Password</a>
+          </div>
+          <p style="color: #6b7280; font-size: 14px; margin-top: 20px;">Or copy and paste this link into your browser:</p>
+          <p style="color: #2563eb; font-size: 12px; word-break: break-all; background-color: #f3f4f6; padding: 10px; border-radius: 4px;">${resetUrl}</p>
+          <p style="color: #6b7280; font-size: 14px; margin-top: 20px;">This link will expire in 1 hour.</p>
+          <p style="color: #6b7280; font-size: 14px; margin-top: 10px;">If you didn't request a password reset, please ignore this email.</p>
+        </div>
+        <div style="text-align: center; padding: 20px; color: #9ca3af; font-size: 12px;">
+          <p style="margin: 0;">© 2024 TruckBooks. All rights reserved.</p>
+        </div>
+      </div>
+    `;
+    sendSmtpEmail.sender = {
+      name: process.env.BREVO_SENDER_NAME || 'TruckBooks',
+      email: process.env.BREVO_SENDER_EMAIL
+    };
+    sendSmtpEmail.to = [{ email }];
+
+    console.log('Sending password reset email to:', email);
+
+    const result = await apiInstance.sendTransacEmail(sendSmtpEmail);
+    
+    console.log('Password reset email sent successfully! Message ID:', result.body?.messageId || result.messageId);
+    
+    return { success: true, messageId: result.body?.messageId || result.messageId };
+  } catch (error) {
+    console.error('Error sending password reset email:', error);
+    throw new Error(`Failed to send password reset email: ${error.response?.data?.message || error.message}`);
+  }
+};
+

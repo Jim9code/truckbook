@@ -4,10 +4,11 @@ import {
   findUserByEmail,
   comparePassword,
   generateToken,
-  findUserById
+  findUserById,
+  generateResetToken
 } from '../services/authService.js';
 import { checkSubscriptionStatus } from '../services/subscriptionService.js';
-import { sendVerificationEmail, generateVerificationCode } from '../services/emailService.js';
+import { sendVerificationEmail, generateVerificationCode, sendPasswordResetEmail } from '../services/emailService.js';
 import { getModels } from '../utils/models.js';
 
 // Signup controller
@@ -277,6 +278,64 @@ export const resendVerificationCode = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error resending verification code',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+};
+
+// Forgot password controller
+export const forgotPassword = async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({
+        success: false,
+        message: 'Email is required'
+      });
+    }
+
+    // Find user by email
+    const user = await findUserByEmail(email);
+
+    // Always return success to prevent email enumeration
+    // Don't reveal if email exists or not
+    if (!user) {
+      return res.json({
+        success: true,
+        message: 'If an account with that email exists, a password reset link has been sent.'
+      });
+    }
+
+    // Generate reset token
+    const resetToken = generateResetToken();
+    const resetTokenExpires = new Date();
+    resetTokenExpires.setHours(resetTokenExpires.getHours() + 1); // 1 hour expiry
+
+    // Update user with reset token
+    await user.update({
+      resetToken,
+      resetTokenExpires
+    });
+
+    // Send password reset email
+    try {
+      await sendPasswordResetEmail(user.email, resetToken, user.fullName);
+      console.log('Password reset email sent successfully to:', user.email);
+    } catch (emailError) {
+      console.error('Email sending failed:', emailError);
+      // Still return success to prevent email enumeration
+    }
+
+    res.json({
+      success: true,
+      message: 'If an account with that email exists, a password reset link has been sent.'
+    });
+  } catch (error) {
+    console.error('Forgot password error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error processing password reset request',
       error: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }

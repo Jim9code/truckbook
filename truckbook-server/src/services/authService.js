@@ -1,5 +1,6 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
+import crypto from 'crypto';
 import { getModels } from '../utils/models.js';
 
 // Hash password
@@ -77,5 +78,40 @@ export const findUserById = async (userId) => {
     return userResponse;
   }
   return null;
+};
+
+// Generate password reset token
+export const generateResetToken = () => {
+  return crypto.randomBytes(32).toString('hex');
+};
+
+// Find user by reset token
+export const findUserByResetToken = async (resetToken) => {
+  const { User } = await getModels();
+  const { Op } = await import('sequelize');
+  const user = await User.findOne({
+    where: {
+      resetToken,
+      resetTokenExpires: {
+        [Op.gt]: new Date()
+      }
+    }
+  });
+  return user;
+};
+
+// Update user password
+export const updateUserPassword = async (userId, newPassword) => {
+  const { User } = await getModels();
+  const hashedPassword = await hashPassword(newPassword);
+  
+  await User.update(
+    {
+      password: hashedPassword,
+      resetToken: null,
+      resetTokenExpires: null
+    },
+    { where: { id: userId } }
+  );
 };
 

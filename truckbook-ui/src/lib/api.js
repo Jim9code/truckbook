@@ -81,6 +81,13 @@ export const api = {
     return apiRequest('/auth/me');
   },
 
+  forgotPassword: async (email) => {
+    return apiRequest('/auth/forgot-password', {
+      method: 'POST',
+      body: JSON.stringify({ email })
+    });
+  },
+
   // Subscription endpoints
   subscribe: async (planType) => {
     return apiRequest('/subscriptions', {

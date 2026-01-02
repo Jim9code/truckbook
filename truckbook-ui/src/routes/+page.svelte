@@ -4,6 +4,8 @@
 	import trucking2 from '$lib/assets/trucking2.jpeg';
 	import trucking3 from '$lib/assets/trucking3.jpeg';
 	import logo from '$lib/assets/truckbooklogo.png';
+
+	let mobileMenuOpen = false;
 </script>
 
 <div class="min-h-screen bg-gray-50">
@@ -16,8 +18,8 @@
 					<img src={logo} alt="TruckBooks" class="h-12 w-auto" />
 				</div>
 
-				<!-- Auth Buttons -->
-				<div class="flex items-center gap-4">
+				<!-- Desktop Navigation -->
+				<div class="hidden md:flex items-center gap-4">
 					<a href="/subscription" class="text-gray-700 hover:text-gray-900 font-medium">Pricing</a>
 					<button
 						on:click={() => goto('/login')}
@@ -32,7 +34,43 @@
 						Get Started
 					</button>
 				</div>
+
+				<!-- Mobile menu button -->
+				<button
+					on:click={() => mobileMenuOpen = !mobileMenuOpen}
+					class="md:hidden p-2 rounded-md text-gray-700 hover:text-gray-900 hover:bg-gray-100"
+					aria-label="Toggle menu"
+				>
+					{#if mobileMenuOpen}
+						<svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+						</svg>
+					{:else}
+						<svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+						</svg>
+					{/if}
+				</button>
 			</div>
+
+			<!-- Mobile menu -->
+			{#if mobileMenuOpen}
+				<div class="md:hidden pb-4 space-y-2">
+					<a href="/subscription" class="block px-3 py-2 text-gray-700 hover:text-gray-900 hover:bg-gray-50 rounded-md font-medium">Pricing</a>
+					<button
+						on:click={() => { mobileMenuOpen = false; goto('/login'); }}
+						class="block w-full text-left px-3 py-2 text-gray-700 hover:text-gray-900 hover:bg-gray-50 rounded-md font-medium"
+					>
+						Log In
+					</button>
+					<button
+						on:click={() => { mobileMenuOpen = false; goto('/signup'); }}
+						class="block w-full text-left px-3 py-2 bg-blue-600 text-white rounded-md font-medium hover:bg-blue-700"
+					>
+						Get Started
+					</button>
+				</div>
+			{/if}
 		</div>
 	</nav>
 

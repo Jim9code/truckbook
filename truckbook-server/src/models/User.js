@@ -43,6 +43,16 @@ export default (sequelize) => {
       type: DataTypes.DATE,
       allowNull: true,
       field: 'code_expires_at'
+    },
+    resetToken: {
+      type: DataTypes.STRING(255),
+      allowNull: true,
+      field: 'reset_token'
+    },
+    resetTokenExpires: {
+      type: DataTypes.DATE,
+      allowNull: true,
+      field: 'reset_token_expires'
     }
   }, {
     tableName: 'users',

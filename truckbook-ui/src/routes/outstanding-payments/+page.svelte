@@ -6,6 +6,8 @@
 	import { api } from '$lib/api.js';
 	import logo from '$lib/assets/truckbooklogo.png';
 
+	let mobileMenuOpen = false;
+
 	// Loading state
 	let isLoading = true;
 
@@ -131,8 +133,8 @@
 					<img src={logo} alt="TruckBooks" class="h-12 w-auto" />
 				</div>
 
-				<!-- Navigation Links -->
-				<div class="flex items-center gap-6">
+				<!-- Desktop Navigation Links -->
+				<div class="hidden md:flex items-center gap-6">
 					<a href="/trips" class="text-gray-700 hover:text-gray-900">Trips</a>
 					<a href="/trucks" class="text-gray-700 hover:text-gray-900">Trucks</a>
 					<a href="/outstanding-payments" class="text-blue-600 font-medium border-b-2 border-blue-600 pb-1">Outstanding Payments</a>
@@ -145,7 +147,41 @@
 						Logout
 					</button>
 				</div>
+
+				<!-- Mobile menu button -->
+				<button
+					on:click={() => mobileMenuOpen = !mobileMenuOpen}
+					class="md:hidden p-2 rounded-md text-gray-700 hover:text-gray-900 hover:bg-gray-100"
+					aria-label="Toggle menu"
+				>
+					{#if mobileMenuOpen}
+						<svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+						</svg>
+					{:else}
+						<svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+						</svg>
+					{/if}
+				</button>
 			</div>
+
+			<!-- Mobile menu -->
+			{#if mobileMenuOpen}
+				<div class="md:hidden pb-4 space-y-2">
+					<a href="/trips" class="block px-3 py-2 text-gray-700 hover:text-gray-900 hover:bg-gray-50 rounded-md">Trips</a>
+					<a href="/trucks" class="block px-3 py-2 text-gray-700 hover:text-gray-900 hover:bg-gray-50 rounded-md">Trucks</a>
+					<a href="/outstanding-payments" class="block px-3 py-2 text-blue-600 font-medium border-l-4 border-blue-600 bg-blue-50 rounded-md">Outstanding Payments</a>
+					<a href="/subscription" class="block px-3 py-2 text-gray-700 hover:text-gray-900 hover:bg-gray-50 rounded-md">Pricing</a>
+					<a href="/getting-started" class="block px-3 py-2 text-gray-700 hover:text-gray-900 hover:bg-gray-50 rounded-md">Help</a>
+					<button
+						on:click={handleLogout}
+						class="block w-full text-left px-3 py-2 bg-red-600 text-white rounded-md font-medium hover:bg-red-700"
+					>
+						Logout
+					</button>
+				</div>
+			{/if}
 		</div>
 	</nav>
 
