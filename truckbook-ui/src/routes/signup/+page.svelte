@@ -253,9 +253,9 @@
 					/>
 					<label for="terms" class="ml-2 text-sm text-gray-700">
 						I agree to the
-						<a href="#" class="text-blue-600 hover:underline">Terms of Service</a>
+						<a href="/terms" target="_blank" rel="noopener noreferrer" class="text-blue-600 hover:underline">Terms of Service</a>
 						and
-						<a href="#" class="text-blue-600 hover:underline">Privacy Policy</a>
+						<a href="/privacy" target="_blank" rel="noopener noreferrer" class="text-blue-600 hover:underline">Privacy Policy</a>
 					</label>
 				</div>
 				{#if errors.terms}

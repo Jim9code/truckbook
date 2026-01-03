@@ -421,6 +421,12 @@
 							<svg class="w-4 h-4 text-blue-400 mr-2 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
 							</svg>
+							<span class="text-gray-600 text-xs">TB WhatsApp Clerk - Record trips, payments, and expenses via WhatsApp</span>
+						</li>
+						<li class="flex items-start">
+							<svg class="w-4 h-4 text-blue-400 mr-2 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+							</svg>
 							<span class="text-gray-600 text-xs">Multiple users (Owner, Accountant, Operations staff)</span>
 						</li>
 						<li class="flex items-start">

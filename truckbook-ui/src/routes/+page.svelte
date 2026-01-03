@@ -307,10 +307,43 @@
 	<!-- Footer -->
 	<footer class="bg-white border-t border-gray-200">
 		<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-			<div class="text-center">
-				<div class="flex items-center justify-center gap-2 mb-4">
-					<img src={logo} alt="TruckBooks" class="h-12 w-auto" />
+			<div class="grid md:grid-cols-3 gap-8 mb-6">
+				<!-- Company Info -->
+				<div>
+					<div class="flex items-center gap-2 mb-4">
+						<img src={logo} alt="TruckBooks" class="h-12 w-auto" />
+					</div>
+					<p class="text-sm text-gray-600 mb-2">
+						Kuchikau 2 by Cyna Road<br />
+						Abuja, Nigeria
+					</p>
 				</div>
+
+				<!-- Legal Links -->
+				<div>
+					<h3 class="text-sm font-semibold text-gray-900 mb-3">Legal</h3>
+					<ul class="space-y-2">
+						<li>
+							<a href="/terms" class="text-sm text-gray-600 hover:text-gray-900">Terms and Conditions</a>
+						</li>
+						<li>
+							<a href="/privacy" class="text-sm text-gray-600 hover:text-gray-900">Privacy Policy</a>
+						</li>
+						<li>
+							<a href="/refund" class="text-sm text-gray-600 hover:text-gray-900">Refund Policy</a>
+						</li>
+					</ul>
+				</div>
+
+				<!-- Contact -->
+				<div>
+					<h3 class="text-sm font-semibold text-gray-900 mb-3">Contact</h3>
+					<p class="text-sm text-gray-600">
+						<a href="mailto:officialsyntechhq@gmail.com" class="hover:text-gray-900">officialsyntechhq@gmail.com</a>
+					</p>
+				</div>
+			</div>
+			<div class="border-t border-gray-200 pt-6 text-center">
 				<p class="text-sm text-gray-500">© 2024 TruckBooks Inc. All rights reserved.</p>
 			</div>
 		</div>

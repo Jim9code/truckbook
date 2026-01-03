@@ -286,6 +286,67 @@ This screen must feel **urgent and clear**.
 
 ---
 
+### 8. TB WhatsApp Clerk (Large Fleet Plan - Coming Soon)
+
+**Purpose**
+Allow logistics business owners to use WhatsApp to record trips, payments, expenses, and maintenance without opening the dashboard.
+
+**Core Goals**
+- Zero learning curve for logistics owners
+- Reduce forgotten records
+- Make TruckBooks usable even by non-technical users
+- Strong differentiation vs other fleet/logistics software
+
+**How it Works**
+- User connects their WhatsApp number during onboarding (Large Fleet plan only)
+- WhatsApp messages are sent to a webhook on our backend
+- The system maintains conversation state per user (simple step-by-step flow)
+- Each completed flow creates or updates records in TruckBooks
+- All WhatsApp-created records appear instantly in the web dashboard
+
+**MVP WhatsApp Commands & Flows**
+
+1. **Create Trip**
+   - Trigger: "new trip"
+   - Ask sequentially: Truck, Pickup location, Destination, Trip amount, Payment status (none / half / full)
+   - Save: Trip record, Outstanding balance if any
+
+2. **Record Payment**
+   - Trigger: "record payment"
+   - Ask: Trip or customer, Amount paid
+   - Update outstanding balance
+
+3. **Record Expense**
+   - Trigger: "add expense"
+   - Ask: Truck, Expense type (fuel, repair, toll, other), Amount
+   - Attach expense to truck and/or trip
+
+4. **Maintenance Log**
+   - Trigger: "maintenance"
+   - Ask: Truck, Issue, Cost
+   - Save maintenance record
+
+5. **Quick Summary**
+   - Trigger: "summary"
+   - Respond with: Profit this week/month, Outstanding payments, Trucks with high expenses
+
+**Data Rules**
+- All WhatsApp-created records must appear instantly in the web dashboard
+- Profit per trip = income – expenses
+- Payment states must handle: Half paid, Fully paid, Outstanding
+
+**UI & Plan Logic**
+- TB WhatsApp Clerk is only available on the Large Fleet plan (₦99k)
+- Starter plan users should see this feature as locked with an upgrade CTA
+- Dashboard should show a "WhatsApp Connected" status
+
+**Important Notes**
+- WhatsApp UX should feel simple, friendly, and non-technical
+- Do not overcomplicate with AI in MVP; structured step-by-step flows are enough
+- UI must reflect data accuracy over fancy visuals
+
+---
+
 ## Data Consistency Rules
 
 - All money values must use the same currency format
