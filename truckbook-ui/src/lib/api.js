@@ -4,7 +4,7 @@ import { browser } from '$app/environment';
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.truckbooks.site/api';
 
 // Get auth token from localStorage
-const getToken = () => {
+export const getToken = () => {
   if (browser) {
     return localStorage.getItem('truckbooks_token');
   }

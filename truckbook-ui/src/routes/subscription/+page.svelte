@@ -1,7 +1,8 @@
 <script>
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
-	import { api } from '$lib/api.js';
+	import { browser } from '$app/environment';
+	import { api, getToken } from '$lib/api.js';
 	import logo from '$lib/assets/truckbooklogo.png';
 	import Toast from '$lib/components/Toast.svelte';
 	import ConfirmationModal from '$lib/components/ConfirmationModal.svelte';
@@ -16,6 +17,7 @@
 	let toastMessage = '';
 	let toastType = 'success';
 	let showToast = false;
+	let isAuthenticated = false;
 
 	function showToastMessage(message, type = 'success') {
 		toastMessage = message;
@@ -23,8 +25,21 @@
 		showToast = true;
 	}
 
+	// Check authentication status
+	function checkAuth() {
+		if (browser) {
+			const token = getToken();
+			isAuthenticated = !!token;
+		}
+	}
+
 	onMount(async () => {
-		await loadSubscriptionStatus();
+		checkAuth();
+		if (isAuthenticated) {
+			await loadSubscriptionStatus();
+		} else {
+			isLoadingStatus = false;
+		}
 	});
 
 	async function loadSubscriptionStatus() {
@@ -42,6 +57,16 @@
 	}
 
 	async function handleSubscribe(planType) {
+		// Check authentication before proceeding
+		checkAuth();
+		if (!isAuthenticated) {
+			showToastMessage('Please log in to subscribe to a plan', 'error');
+			setTimeout(() => {
+				goto('/login');
+			}, 1500);
+			return;
+		}
+
 		isLoading = true;
 		error = '';
 
@@ -60,7 +85,15 @@
 			}
 		} catch (err) {
 			console.error('Subscription error:', err);
-			error = err.message || 'Error creating subscription. Please try again.';
+			// If error is due to authentication, redirect to login
+			if (err.message?.includes('401') || err.message?.includes('Unauthorized') || err.message?.includes('token')) {
+				showToastMessage('Please log in to subscribe', 'error');
+				setTimeout(() => {
+					goto('/login');
+				}, 1500);
+			} else {
+				error = err.message || 'Error creating subscription. Please try again.';
+			}
 		} finally {
 			isLoading = false;
 		}
@@ -220,6 +253,28 @@
 				</p>
 			</div>
 
+			<!-- Authentication Required Message -->
+			{#if !isAuthenticated}
+				<div class="max-w-5xl mx-auto mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+					<div class="flex items-center justify-between">
+						<div class="flex items-center">
+							<svg class="w-5 h-5 text-yellow-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+							</svg>
+							<p class="text-yellow-800 text-sm font-medium">
+								Please log in to subscribe to a plan
+							</p>
+						</div>
+						<button
+							on:click={() => goto('/login')}
+							class="bg-yellow-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-yellow-700 transition-colors"
+						>
+							Log In
+						</button>
+					</div>
+				</div>
+			{/if}
+
 			<!-- Error Message -->
 			{#if error}
 				<div class="max-w-5xl mx-auto mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
@@ -324,10 +379,10 @@
 
 				<button
 					on:click={() => handleSubscribe('starter')}
-					disabled={isLoading}
+					disabled={isLoading || !isAuthenticated}
 					class="w-full bg-gray-100 text-gray-900 py-3 rounded-lg font-medium hover:bg-gray-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
 				>
-					{isLoading ? 'Processing...' : 'Start Starter Plan'}
+					{isLoading ? 'Processing...' : !isAuthenticated ? 'Log In to Subscribe' : 'Start Starter Plan'}
 				</button>
 			</div>
 
@@ -440,10 +495,10 @@
 
 				<button
 					on:click={() => handleSubscribe('large-fleet')}
-					disabled={isLoading}
+					disabled={isLoading || !isAuthenticated}
 					class="w-full bg-blue-600 text-white py-3 rounded-lg font-medium hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
 				>
-					{isLoading ? 'Processing...' : 'Start Large Fleet Plan'}
+					{isLoading ? 'Processing...' : !isAuthenticated ? 'Log In to Subscribe' : 'Start Large Fleet Plan'}
 				</button>
 			</div>
 		</div>
