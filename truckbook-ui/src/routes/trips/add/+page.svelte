@@ -18,8 +18,15 @@
 	let selectedTruck = '';
 	let selectedDriver = '';
 	let selectedCustomer = '';
-	let routeFrom = '';
-	let routeTo = '';
+	let routes = [{ from: '', to: '', date: '' }]; // Array of route objects
+	
+	// Update first route date when tripDate changes (for new trips)
+	$: {
+		if (tripDate && routes.length > 0 && !routes[0].date && !isEditMode) {
+			routes[0].date = tripDate;
+		}
+	}
+	let returnDate = '';
 	let status = 'Pending';
 	
 	let agreedPrice = 0;
@@ -151,8 +158,24 @@
 				selectedTruck = trip.truck;
 				selectedDriver = trip.driver;
 				selectedCustomer = trip.customer;
-				routeFrom = trip.routeFrom;
-				routeTo = trip.routeTo;
+				
+				// Handle routes - if new format exists, use it, otherwise convert old format
+				if (trip.routes && Array.isArray(trip.routes) && trip.routes.length > 0) {
+					routes = trip.routes.map(r => ({
+						from: r.from || '',
+						to: r.to || '',
+						date: r.date || trip.date || ''
+					}));
+				} else {
+					// Convert old single route format to new array format
+					routes = [{ 
+						from: trip.routeFrom || '', 
+						to: trip.routeTo || '', 
+						date: trip.date || '' 
+					}];
+				}
+				
+				returnDate = trip.returnDate || '';
 				status = trip.status;
 				agreedPrice = parseFloat(trip.agreedPrice) || 0;
 				paymentType = trip.paymentType;
@@ -191,15 +214,121 @@
 		const parsed = parseFloat(value);
 		return isNaN(parsed) ? 0 : parsed;
 	}
+	
+	// Route management functions
+	function addRoute() {
+		// Use the last route's date or trip date as default
+		const defaultDate = routes.length > 0 && routes[routes.length - 1].date 
+			? routes[routes.length - 1].date 
+			: tripDate || '';
+		routes = [...routes, { from: '', to: '', date: defaultDate }];
+	}
+	
+	function removeRoute(index) {
+		if (routes.length > 1) {
+			routes = routes.filter((_, i) => i !== index);
+		}
+	}
+	
+	function moveRouteUp(index) {
+		if (index > 0) {
+			const newRoutes = [...routes];
+			[newRoutes[index - 1], newRoutes[index]] = [newRoutes[index], newRoutes[index - 1]];
+			routes = newRoutes;
+		}
+	}
+	
+	function moveRouteDown(index) {
+		if (index < routes.length - 1) {
+			const newRoutes = [...routes];
+			[newRoutes[index], newRoutes[index + 1]] = [newRoutes[index + 1], newRoutes[index]];
+			routes = newRoutes;
+		}
+	}
+	
+	// Auto-set return date when status changes to Completed
+	$: {
+		if (status === 'Completed' && !returnDate) {
+			returnDate = new Date().toISOString().split('T')[0];
+		}
+	}
+	
+	// Validate routes chronological order
+	function validateRoutesChronological() {
+		for (let i = 0; i < routes.length - 1; i++) {
+			const currentDate = new Date(routes[i].date);
+			const nextDate = new Date(routes[i + 1].date);
+			if (currentDate > nextDate) {
+				return {
+					valid: false,
+					message: `Route ${i + 1} date must be before or equal to Route ${i + 2} date`
+				};
+			}
+		}
+		return { valid: true };
+	}
+	
+	// Validate return date is after all route dates
+	function validateReturnDate() {
+		if (!returnDate) return { valid: true };
+		
+		const returnDateObj = new Date(returnDate);
+		for (let i = 0; i < routes.length; i++) {
+			if (routes[i].date) {
+				const routeDate = new Date(routes[i].date);
+				if (returnDateObj < routeDate) {
+					return {
+						valid: false,
+						message: `Return date must be after or equal to all route dates`
+					};
+				}
+			}
+		}
+		return { valid: true };
+	}
 
 	async function handleSave() {
 		// Prevent double submission
 		if (isSaving) return;
 
 		// Validate required fields
-		if (!tripDate || !selectedTruck || !selectedDriver || !selectedCustomer || !routeFrom || !routeTo) {
+		if (!tripDate || !selectedTruck || !selectedDriver || !selectedCustomer) {
 			alert('Please fill in all required fields');
 			return;
+		}
+		
+		// Validate routes
+		if (!routes || routes.length === 0) {
+			alert('Please add at least one route');
+			return;
+		}
+		
+		// Validate each route has all fields
+		for (let i = 0; i < routes.length; i++) {
+			const route = routes[i];
+			if (!route.from?.trim() || !route.to?.trim() || !route.date) {
+				alert(`Please fill in all fields for route ${i + 1}`);
+				return;
+			}
+		}
+		
+		// Validate routes are in chronological order
+		const chronologicalCheck = validateRoutesChronological();
+		if (!chronologicalCheck.valid) {
+			alert(chronologicalCheck.message);
+			return;
+		}
+		
+		// Validate return date if status is Completed
+		if (status === 'Completed') {
+			if (!returnDate) {
+				returnDate = new Date().toISOString().split('T')[0];
+			}
+			const returnDateCheck = validateReturnDate();
+			if (!returnDateCheck.valid) {
+				alert(returnDateCheck.message);
+				return;
+			}
 		}
 
 		// Validate agreed price
@@ -232,8 +361,12 @@
 			truck: selectedTruck,
 			driver: selectedDriver,
 			customer: selectedCustomer,
-			routeFrom,
-			routeTo,
+			routes: routes.map(r => ({
+				from: r.from.trim(),
+				to: r.to.trim(),
+				date: r.date
+			})),
+			returnDate: returnDate || null,
 			status,
 			agreedPrice: validatedAgreedPrice,
 			paymentType,
@@ -602,48 +735,111 @@
 							/>
 						</div>
 
-						<div>
-							<label for="routeFrom" class="block text-sm font-medium text-gray-700 mb-1">
-								Route (From) <span class="text-red-500">*</span>
+						<div class="md:col-span-2">
+							<label class="block text-sm font-medium text-gray-700 mb-3">
+								Routes <span class="text-red-500">*</span>
+								<span class="text-xs font-normal text-gray-500 ml-2">(Add multiple routes for trips with multiple stops)</span>
 							</label>
-							<div class="relative">
-								<div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-									<svg class="h-5 w-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-										<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-										<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+							<div class="space-y-3">
+								{#each routes as route, index}
+									<div class="flex gap-2 items-end p-3 bg-gray-50 rounded-lg border border-gray-200">
+										<div class="flex-shrink-0 pt-6">
+											<div class="flex flex-col gap-1">
+												<button
+													type="button"
+													on:click={() => moveRouteUp(index)}
+													disabled={index === 0}
+													class="p-1 text-gray-400 hover:text-gray-600 disabled:opacity-30 disabled:cursor-not-allowed"
+													title="Move up"
+												>
+													<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+														<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7" />
+													</svg>
+												</button>
+												<button
+													type="button"
+													on:click={() => moveRouteDown(index)}
+													disabled={index === routes.length - 1}
+													class="p-1 text-gray-400 hover:text-gray-600 disabled:opacity-30 disabled:cursor-not-allowed"
+													title="Move down"
+												>
+													<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+														<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+													</svg>
+												</button>
+											</div>
+										</div>
+										<div class="flex-1">
+											<label class="block text-xs text-gray-600 mb-1">From</label>
+											<input
+												type="text"
+												bind:value={route.from}
+												placeholder="e.g. Dallas, TX"
+												class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none text-sm"
+												required
+											/>
+										</div>
+										<div class="flex-1">
+											<label class="block text-xs text-gray-600 mb-1">To</label>
+											<input
+												type="text"
+												bind:value={route.to}
+												placeholder="e.g. Houston, TX"
+												class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none text-sm"
+												required
+											/>
+										</div>
+										<div class="flex-1">
+											<label class="block text-xs text-gray-600 mb-1">Date</label>
+											<input
+												type="date"
+												bind:value={route.date}
+												class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none text-sm"
+												required
+											/>
+										</div>
+										<div class="flex-shrink-0 pt-6">
+											<button
+												type="button"
+												on:click={() => removeRoute(index)}
+												disabled={routes.length === 1}
+												class="p-2 text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+												title="Remove route"
+											>
+												<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+													<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+												</svg>
+											</button>
+										</div>
+									</div>
+								{/each}
+								<button
+									type="button"
+									on:click={addRoute}
+									class="w-full px-4 py-2.5 border-2 border-dashed border-gray-300 rounded-lg text-gray-600 hover:border-blue-500 hover:text-blue-600 transition-colors flex items-center justify-center gap-2 text-sm font-medium"
+								>
+									<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+										<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
 									</svg>
-								</div>
-								<input
-									type="text"
-									id="routeFrom"
-									bind:value={routeFrom}
-									placeholder="e.g. Dallas, TX"
-									class="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
-									required
-								/>
+									Add Another Route
+								</button>
 							</div>
 						</div>
 
 						<div>
-							<label for="routeTo" class="block text-sm font-medium text-gray-700 mb-1">
-								Route (To) <span class="text-red-500">*</span>
+							<label for="returnDate" class="block text-sm font-medium text-gray-700 mb-1">
+								Return Date {status === 'Completed' ? '<span class="text-red-500">*</span>' : ''}
 							</label>
-							<div class="relative">
-								<div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-									<svg class="h-5 w-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-										<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-										<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-									</svg>
-								</div>
-								<input
-									type="text"
-									id="routeTo"
-									bind:value={routeTo}
-									placeholder="e.g. Houston, TX"
-									class="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
-									required
-								/>
-							</div>
+							<input
+								type="date"
+								id="returnDate"
+								bind:value={returnDate}
+								disabled={isLoadingTrip}
+								class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none disabled:opacity-50"
+							/>
+							{#if status === 'Completed' && !returnDate}
+								<p class="text-xs text-gray-500 mt-1">Return date will be auto-set when status is Completed</p>
+							{/if}
 						</div>
 					</div>
 				</div>

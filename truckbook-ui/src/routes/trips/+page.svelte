@@ -537,8 +537,22 @@
 									<td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
 										{trip.customer}
 									</td>
-									<td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-										{trip.routeFrom} → {trip.routeTo}
+									<td class="px-6 py-4 text-sm text-gray-900">
+										{#if trip.routes && Array.isArray(trip.routes) && trip.routes.length > 0}
+											<div class="space-y-1">
+												{#each trip.routes as route, index}
+													<div class="flex items-center gap-1">
+														<span class="text-xs text-gray-500">#{index + 1}</span>
+														<span>{route.from} → {route.to}</span>
+														{#if route.date}
+															<span class="text-xs text-gray-400">({new Date(route.date).toLocaleDateString('en-NG', { month: 'short', day: 'numeric' })})</span>
+														{/if}
+													</div>
+												{/each}
+											</div>
+										{:else}
+											{trip.routeFrom} → {trip.routeTo}
+										{/if}
 									</td>
 									<td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-right">
 										{formatCurrency(trip.agreedPrice)}

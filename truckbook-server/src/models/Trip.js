@@ -109,6 +109,17 @@ export default (sequelize) => {
     notes: {
       type: DataTypes.TEXT,
       allowNull: true
+    },
+    routes: {
+      type: DataTypes.JSON,
+      allowNull: true,
+      defaultValue: []
+      // Example structure: [{from: "Location A", to: "Location B", date: "2024-01-15"}, ...]
+    },
+    returnDate: {
+      type: DataTypes.DATEONLY,
+      allowNull: true,
+      field: 'return_date'
     }
   }, {
     tableName: 'trips',

@@ -126,7 +126,21 @@ export const exportTripsToExcel = async (userId, filters = {}) => {
     const maintenanceCost = parseFloat(trip.truckMaintenanceCost || 0);
     const totalCost = operationalCost + maintenanceCost;
     const profit = parseFloat(trip.totalReceived || 0) - totalCost;
-    const route = `${trip.routeFrom} → ${trip.routeTo}`;
+    
+    // Format route - use routes array if available, otherwise use old format
+    let route = '';
+    if (trip.routes && Array.isArray(trip.routes) && trip.routes.length > 0) {
+      route = trip.routes.map((r, idx) => {
+        const routeStr = `${r.from} → ${r.to}`;
+        if (r.date) {
+          const date = new Date(r.date).toLocaleDateString('en-NG', { month: 'short', day: 'numeric' });
+          return `${routeStr} (${date})`;
+        }
+        return routeStr;
+      }).join(', ');
+    } else {
+      route = `${trip.routeFrom || ''} → ${trip.routeTo || ''}`;
+    }
 
     worksheet.getRow(row).values = [
       new Date(trip.date),
@@ -290,7 +304,21 @@ export const exportTripsToPDF = async (userId, filters = {}) => {
       const maintenanceCost = parseFloat(trip.truckMaintenanceCost || 0);
       const totalCost = operationalCost + maintenanceCost;
       const profit = parseFloat(trip.totalReceived || 0) - totalCost;
-      const route = `${trip.routeFrom} → ${trip.routeTo}`;
+      
+      // Format route - use routes array if available, otherwise use old format
+      let route = '';
+      if (trip.routes && Array.isArray(trip.routes) && trip.routes.length > 0) {
+        route = trip.routes.map((r, idx) => {
+          const routeStr = `${r.from} → ${r.to}`;
+          if (r.date) {
+            const date = new Date(r.date).toLocaleDateString('en-NG', { month: 'short', day: 'numeric' });
+            return `${routeStr} (${date})`;
+          }
+          return routeStr;
+        }).join(', ');
+      } else {
+        route = `${trip.routeFrom || ''} → ${trip.routeTo || ''}`;
+      }
       const profitText = profit >= 0 
         ? `+₦${profit.toLocaleString('en-NG', { minimumFractionDigits: 2 })}`
         : `-₦${Math.abs(profit).toLocaleString('en-NG', { minimumFractionDigits: 2 })}`;

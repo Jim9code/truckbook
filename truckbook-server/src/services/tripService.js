@@ -218,6 +218,19 @@ export const getTripById = async (tripId, userId) => {
     tripData.customer = tripData.customer.name;
   }
   
+  // Parse routes if it's a string
+  if (tripData.routes && typeof tripData.routes === 'string') {
+    try {
+      tripData.routes = JSON.parse(tripData.routes);
+    } catch (e) {
+      tripData.routes = [];
+    }
+  }
+  // If no routes but has routeFrom/routeTo, convert to routes array
+  if ((!tripData.routes || tripData.routes.length === 0) && tripData.routeFrom && tripData.routeTo) {
+    tripData.routes = [{ from: tripData.routeFrom, to: tripData.routeTo, date: tripData.date }];
+  }
+  
   return tripData;
 };
 
@@ -231,6 +244,8 @@ export const createTrip = async (userId, tripData) => {
     customer: customerName,
     routeFrom,
     routeTo,
+    routes,
+    returnDate,
     status,
     agreedPrice,
     paymentType,
@@ -280,6 +295,25 @@ export const createTrip = async (userId, tripData) => {
   const totalCost = (parseFloat(fuelCost) || 0) + (parseFloat(maintenanceCost) || 0) + (parseFloat(otherCosts) || 0);
   const totalReceived = (parseFloat(amountReceivedBefore) || 0) + (parseFloat(amountReceivedAfter) || 0);
 
+  // Handle routes - use new routes array if provided, otherwise convert old format
+  let routesArray = [];
+  if (routes && Array.isArray(routes) && routes.length > 0) {
+    routesArray = routes.map(r => ({
+      from: r.from?.trim() || '',
+      to: r.to?.trim() || '',
+      date: r.date || date
+    }));
+  } else if (routeFrom && routeTo) {
+    // Backward compatibility: convert old single route format
+    routesArray = [{ from: routeFrom.trim(), to: routeTo.trim(), date: date }];
+  }
+
+  // Auto-set returnDate when status is Completed
+  let finalReturnDate = returnDate;
+  if (status === 'Completed' && !finalReturnDate) {
+    finalReturnDate = new Date().toISOString().split('T')[0];
+  }
+
   // Create trip
   const trip = await Trip.create({
     userId,
@@ -287,8 +321,10 @@ export const createTrip = async (userId, tripData) => {
     driverId: driver.id,
     customerId: customer.id,
     date,
-    routeFrom: routeFrom.trim(),
-    routeTo: routeTo.trim(),
+    routeFrom: routesArray.length > 0 ? routesArray[0].from : (routeFrom?.trim() || ''),
+    routeTo: routesArray.length > 0 ? routesArray[routesArray.length - 1].to : (routeTo?.trim() || ''),
+    routes: routesArray,
+    returnDate: finalReturnDate || null,
     status: status || 'Pending',
     agreedPrice: parseFloat(agreedPrice),
     paymentType: paymentType || 'full',
@@ -302,7 +338,16 @@ export const createTrip = async (userId, tripData) => {
     notes: notes || null
   });
 
-  return trip.toJSON();
+  const tripResult = trip.toJSON();
+  // Ensure routes is parsed if it's a string
+  if (tripResult.routes && typeof tripResult.routes === 'string') {
+    try {
+      tripResult.routes = JSON.parse(tripResult.routes);
+    } catch (e) {
+      tripResult.routes = [];
+    }
+  }
+  return tripResult;
 };
 
 // Update trip
@@ -315,6 +360,8 @@ export const updateTrip = async (tripId, userId, tripData) => {
     customer: customerName,
     routeFrom,
     routeTo,
+    routes,
+    returnDate,
     status,
     agreedPrice,
     paymentType,
@@ -384,14 +431,40 @@ export const updateTrip = async (tripId, userId, tripData) => {
   const totalCost = (parseFloat(fuelCost) || 0) + (parseFloat(maintenanceCost) || 0) + (parseFloat(otherCosts) || 0);
   const totalReceived = (parseFloat(amountReceivedBefore) || 0) + (parseFloat(amountReceivedAfter) || 0);
 
+  // Handle routes - use new routes array if provided, otherwise convert old format or keep existing
+  let routesArray = trip.routes || [];
+  if (routes && Array.isArray(routes) && routes.length > 0) {
+    routesArray = routes.map(r => ({
+      from: r.from?.trim() || '',
+      to: r.to?.trim() || '',
+      date: r.date || date || trip.date
+    }));
+  } else if (routeFrom && routeTo) {
+    // Backward compatibility: convert old single route format
+    routesArray = [{ from: routeFrom.trim(), to: routeTo.trim(), date: date || trip.date }];
+  }
+
+  // Auto-set returnDate when status changes to Completed
+  let finalReturnDate = returnDate;
+  const oldStatus = trip.status;
+  if (status === 'Completed' && oldStatus !== 'Completed' && !finalReturnDate) {
+    finalReturnDate = new Date().toISOString().split('T')[0];
+  }
+
+  // Update routeFrom and routeTo for backward compatibility (first and last route)
+  const updatedRouteFrom = routesArray.length > 0 ? routesArray[0].from : (routeFrom?.trim() || trip.routeFrom);
+  const updatedRouteTo = routesArray.length > 0 ? routesArray[routesArray.length - 1].to : (routeTo?.trim() || trip.routeTo);
+
   // Update trip
   await trip.update({
     ...(date && { date }),
     ...(truckId && { truckId }),
     ...(driverId && { driverId }),
     ...(customerId && { customerId }),
-    ...(routeFrom && { routeFrom: routeFrom.trim() }),
-    ...(routeTo && { routeTo: routeTo.trim() }),
+    ...(updatedRouteFrom && { routeFrom: updatedRouteFrom }),
+    ...(updatedRouteTo && { routeTo: updatedRouteTo }),
+    routes: routesArray,
+    ...(finalReturnDate !== undefined && { returnDate: finalReturnDate || null }),
     ...(status && { status }),
     ...(agreedPrice !== undefined && { agreedPrice: parseFloat(agreedPrice) }),
     ...(paymentType && { paymentType }),
@@ -405,7 +478,16 @@ export const updateTrip = async (tripId, userId, tripData) => {
     ...(notes !== undefined && { notes: notes || null })
   });
 
-  return trip.toJSON();
+  const tripResult = trip.toJSON();
+  // Ensure routes is parsed if it's a string
+  if (tripResult.routes && typeof tripResult.routes === 'string') {
+    try {
+      tripResult.routes = JSON.parse(tripResult.routes);
+    } catch (e) {
+      tripResult.routes = [];
+    }
+  }
+  return tripResult;
 };
 
 // Delete trip
