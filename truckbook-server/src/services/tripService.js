@@ -1,5 +1,6 @@
 import { getModels } from '../utils/models.js';
 import { findOrCreateCustomer } from './customerService.js';
+import { getTruckMaintenanceTotal } from './maintenanceService.js';
 
 // Get all trips for a user with filters
 export const getUserTrips = async (userId, filters = {}, planType = null) => {
@@ -120,12 +121,44 @@ export const getUserTrips = async (userId, filters = {}, planType = null) => {
     order: [['date', 'DESC'], ['createdAt', 'DESC']]
   });
 
-  return trips.map(trip => {
+  // Get maintenance costs for all trucks in parallel
+  const tripsWithMaintenance = await Promise.all(trips.map(async (trip) => {
     const tripData = trip.toJSON();
+    
     // Format truck as "Truck Name #Plate Number" for frontend
     if (tripData.truck) {
+      const truckId = trip.truckId || (trip.truck && trip.truck.id);
       tripData.truck = `${tripData.truck.name} #${tripData.truck.plateNumber}`;
+      
+      // Get maintenance cost for this truck (all time, up to trip date)
+      if (truckId) {
+        try {
+          // Get total maintenance cost for the truck up to the trip date
+          const { MaintenanceRecord } = await getModels();
+          const { Op } = await import('sequelize');
+          
+          const maintenanceTotal = await MaintenanceRecord.sum('amount', {
+            where: {
+              truckId,
+              userId,
+              date: {
+                [Op.lte]: tripData.date || new Date()
+              }
+            }
+          });
+          
+          tripData.truckMaintenanceCost = parseFloat(maintenanceTotal) || 0;
+        } catch (error) {
+          console.error(`Error fetching maintenance for truck ${truckId}:`, error);
+          tripData.truckMaintenanceCost = 0;
+        }
+      } else {
+        tripData.truckMaintenanceCost = 0;
+      }
+    } else {
+      tripData.truckMaintenanceCost = 0;
     }
+    
     // Format driver as name
     if (tripData.driver) {
       tripData.driver = tripData.driver.name;
@@ -134,8 +167,11 @@ export const getUserTrips = async (userId, filters = {}, planType = null) => {
     if (tripData.customer) {
       tripData.customer = tripData.customer.name;
     }
+    
     return tripData;
-  });
+  }));
+  
+  return tripsWithMaintenance;
 };
 
 // Get single trip by ID

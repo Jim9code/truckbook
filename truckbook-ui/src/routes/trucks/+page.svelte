@@ -83,9 +83,8 @@
 							...truck,
 							totalTrips,
 							totalRevenue,
-							totalCost,
-							netProfit,
-							maintenanceTotal
+							maintenanceTotal,
+							netProfit
 						};
 					}));
 				} else {
@@ -94,9 +93,8 @@
 						...truck,
 						totalTrips: 0,
 						totalRevenue: 0,
-						totalCost: 0,
-						netProfit: 0,
-						maintenanceTotal: 0
+						maintenanceTotal: 0,
+						netProfit: 0
 					}));
 				}
 			}
@@ -123,7 +121,7 @@
 
 	// Calculate totals
 	$: totalRevenue = trucks.reduce((sum, truck) => sum + truck.totalRevenue, 0);
-	$: totalCost = trucks.reduce((sum, truck) => sum + truck.totalCost, 0);
+	$: totalMaintenance = trucks.reduce((sum, truck) => sum + truck.maintenanceTotal, 0);
 	$: totalProfit = trucks.reduce((sum, truck) => sum + truck.netProfit, 0);
 	$: activeTrucks = trucks.filter(truck => truck.totalTrips > 0).length;
 	$: totalTrucks = trucks.length;
@@ -568,7 +566,7 @@
 							<th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Truck Name / Plate Number</th>
 							<th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total Trips</th>
 							<th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Total Revenue</th>
-							<th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Total Cost</th>
+							<th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Maintenance Cost</th>
 							<th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Net Profit</th>
 						</tr>
 					</thead>
@@ -604,7 +602,7 @@
 										{truck.totalTrips > 0 ? formatCurrency(truck.totalRevenue) : '-'}
 									</td>
 									<td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-right">
-										{truck.totalTrips > 0 ? formatCurrency(truck.totalCost) : '-'}
+										{formatCurrency(truck.maintenanceTotal)}
 									</td>
 									<td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-right">
 										{#if truck.totalTrips > 0}

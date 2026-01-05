@@ -168,9 +168,12 @@
 	$: totalProfit = stats.totalProfit || 0;
 	$: activeTrips = stats.activeTrips || 0;
 
-	// Calculate profit/loss for a trip
+	// Calculate profit/loss for a trip (including maintenance costs)
 	function calculateProfit(trip) {
-		return parseFloat(trip.totalReceived || 0) - parseFloat(trip.totalCost || 0);
+		const operationalCost = parseFloat(trip.totalCost || 0);
+		const maintenanceCost = parseFloat(trip.truckMaintenanceCost || 0);
+		const totalCost = operationalCost + maintenanceCost;
+		return parseFloat(trip.totalReceived || 0) - totalCost;
 	}
 
 	// Format currency (using ₦ for Naira as per plan)

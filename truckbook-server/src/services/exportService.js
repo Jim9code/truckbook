@@ -122,7 +122,10 @@ export const exportTripsToExcel = async (userId, filters = {}) => {
   // Add trip data
   trips.forEach((trip, index) => {
     const row = headerRow + 1 + index;
-    const profit = parseFloat(trip.totalReceived || 0) - parseFloat(trip.totalCost || 0);
+    const operationalCost = parseFloat(trip.totalCost || 0);
+    const maintenanceCost = parseFloat(trip.truckMaintenanceCost || 0);
+    const totalCost = operationalCost + maintenanceCost;
+    const profit = parseFloat(trip.totalReceived || 0) - totalCost;
     const route = `${trip.routeFrom} → ${trip.routeTo}`;
 
     worksheet.getRow(row).values = [
@@ -283,7 +286,10 @@ export const exportTripsToPDF = async (userId, filters = {}) => {
         y = 50;
       }
 
-      const profit = parseFloat(trip.totalReceived || 0) - parseFloat(trip.totalCost || 0);
+      const operationalCost = parseFloat(trip.totalCost || 0);
+      const maintenanceCost = parseFloat(trip.truckMaintenanceCost || 0);
+      const totalCost = operationalCost + maintenanceCost;
+      const profit = parseFloat(trip.totalReceived || 0) - totalCost;
       const route = `${trip.routeFrom} → ${trip.routeTo}`;
       const profitText = profit >= 0 
         ? `+₦${profit.toLocaleString('en-NG', { minimumFractionDigits: 2 })}`
@@ -405,8 +411,7 @@ export const exportTrucksToExcel = async (userId) => {
     'Plate Number',
     'Total Trips',
     'Total Revenue',
-    'Total Cost',
-    'Maintenance Total',
+    'Maintenance Cost',
     'Net Profit'
   ];
 
@@ -445,7 +450,6 @@ export const exportTrucksToExcel = async (userId) => {
       plateNumber: truck.plateNumber,
       totalTrips,
       totalRevenue,
-      totalCost,
       maintenanceTotal,
       netProfit
     };
@@ -459,18 +463,17 @@ export const exportTrucksToExcel = async (userId) => {
       truck.plateNumber,
       truck.totalTrips,
       truck.totalRevenue,
-      truck.totalCost,
       truck.maintenanceTotal,
       truck.netProfit
     ];
 
-    // Format currency columns
-    [3, 4, 5, 6].forEach(colIndex => {
+    // Format currency columns (Revenue, Maintenance Cost, Net Profit)
+    [3, 4, 5].forEach(colIndex => {
       summarySheet.getCell(row, colIndex + 1).numFmt = '₦#,##0.00';
     });
 
     // Color net profit column
-    const profitCell = summarySheet.getCell(row, 7);
+    const profitCell = summarySheet.getCell(row, 6);
     if (truck.netProfit >= 0) {
       profitCell.font = { color: { argb: 'FF008000' } }; // Green
     } else {
@@ -485,7 +488,6 @@ export const exportTrucksToExcel = async (userId) => {
     '',
     truckData.reduce((sum, t) => sum + t.totalTrips, 0),
     truckData.reduce((sum, t) => sum + t.totalRevenue, 0),
-    truckData.reduce((sum, t) => sum + t.totalCost, 0),
     truckData.reduce((sum, t) => sum + t.maintenanceTotal, 0),
     truckData.reduce((sum, t) => sum + t.netProfit, 0)
   ];
@@ -498,8 +500,8 @@ export const exportTrucksToExcel = async (userId) => {
     fgColor: { argb: 'FFF0F0F0' }
   };
 
-  // Format totals currency columns
-  [3, 4, 5, 6].forEach(colIndex => {
+  // Format totals currency columns (Revenue, Maintenance Cost, Net Profit)
+  [3, 4, 5].forEach(colIndex => {
     summarySheet.getCell(totalsRow, colIndex + 1).numFmt = '₦#,##0.00';
   });
 
