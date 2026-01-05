@@ -38,6 +38,14 @@
 	let isLoadingData = true;
 	let isLoadingTrip = false; // Loading state for trip data in edit mode
 	let isSaving = false; // Loading state for save button
+	
+	// Add Truck Modal state
+	let showAddTruckModal = false;
+	let newTruckName = '';
+	let newPlateNumber = '';
+	let newDriverName = '';
+	let truckErrors = {};
+	let isSavingTruck = false;
 
 	// Sample trips data - will be replaced with API call
 	const sampleTrips = [
@@ -267,6 +275,84 @@
 	function handleCancel() {
 		goto('/trips');
 	}
+	
+	// Add Truck Modal functions
+	async function handleAddTruckFromDropdown() {
+		showAddTruckModal = true;
+		newTruckName = '';
+		newPlateNumber = '';
+		newDriverName = '';
+		truckErrors = {};
+	}
+	
+	async function saveNewTruck() {
+		truckErrors = {};
+		
+		if (!newTruckName.trim()) {
+			truckErrors.truckName = 'Truck name is required';
+		}
+		if (!newPlateNumber.trim()) {
+			truckErrors.plateNumber = 'Plate number is required';
+		}
+		if (!newDriverName.trim()) {
+			truckErrors.driverName = 'Driver name is required';
+		}
+		
+		if (Object.keys(truckErrors).length > 0) {
+			return;
+		}
+		
+		try {
+			isSavingTruck = true;
+			const response = await api.addTruck({
+				name: newTruckName.trim(),
+				plateNumber: newPlateNumber.trim().toUpperCase(),
+				driverName: newDriverName.trim()
+			});
+			
+			if (response.success) {
+				// Reload trucks list
+				const trucksResponse = await api.getTrucks();
+				if (trucksResponse.success) {
+					trucks = trucksResponse.data.map(t => `${t.name} #${t.plateNumber}`);
+					// Auto-select the newly added truck
+					selectedTruck = `${newTruckName.trim()} #${newPlateNumber.trim().toUpperCase()}`;
+				}
+				// Also reload drivers list in case the driver is new
+				const driversResponse = await api.getDrivers();
+				if (driversResponse.success) {
+					drivers = driversResponse.data.map(d => d.name);
+					// Auto-select the newly added driver
+					selectedDriver = newDriverName.trim();
+				}
+				// Close modal
+				closeTruckModal();
+			} else {
+				if (response.requiresUpgrade) {
+					truckErrors.submit = response.message || 'Please upgrade to Large Fleet plan to add more trucks.';
+				} else {
+					truckErrors.submit = response.message || 'Error adding truck';
+				}
+			}
+		} catch (error) {
+			console.error('Error adding truck:', error);
+			if (error.response?.requiresUpgrade) {
+				truckErrors.submit = error.response.message || 'Please upgrade to Large Fleet plan to add more trucks.';
+			} else {
+				truckErrors.submit = error.message || 'Error adding truck';
+			}
+		} finally {
+			isSavingTruck = false;
+		}
+	}
+	
+	function closeTruckModal() {
+		showAddTruckModal = false;
+		newTruckName = '';
+		newPlateNumber = '';
+		newDriverName = '';
+		truckErrors = {};
+	}
 </script>
 
 <style>
@@ -469,7 +555,19 @@
 								{#each trucks as truck}
 									<option value={truck}>{truck}</option>
 								{/each}
+								{#if !isLoadingData && trucks.length === 0}
+									<option value="__add_truck__" disabled>--- No trucks available ---</option>
+								{/if}
 							</select>
+							{#if !isLoadingData && trucks.length === 0}
+								<button
+									type="button"
+									on:click={handleAddTruckFromDropdown}
+									class="mt-2 w-full px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors text-sm"
+								>
+									+ Add Your First Truck
+								</button>
+							{/if}
 						</div>
 
 						<div>
@@ -733,4 +831,113 @@
 		</div>
 		{/if}
 	</main>
+	
+	<!-- Add Truck Modal -->
+	{#if showAddTruckModal}
+		<div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" on:click={closeTruckModal}>
+			<div class="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto p-6" on:click|stopPropagation>
+				<div class="flex justify-between items-center mb-6">
+					<h2 class="text-2xl font-bold text-gray-900">Add Truck</h2>
+					<button
+						on:click={closeTruckModal}
+						class="text-gray-400 hover:text-gray-600"
+						disabled={isSavingTruck}
+					>
+						<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+						</svg>
+					</button>
+				</div>
+				
+				<form on:submit|preventDefault={saveNewTruck} class="space-y-4">
+					<div>
+						<label for="newTruckName" class="block text-sm font-medium text-gray-700 mb-1">
+							Truck Name <span class="text-red-500">*</span>
+						</label>
+						<input
+							type="text"
+							id="newTruckName"
+							bind:value={newTruckName}
+							placeholder="e.g. Volvo VNL 860"
+							class="w-full px-4 py-2.5 border {truckErrors.truckName ? 'border-red-300' : 'border-gray-300'} rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+							required
+							disabled={isSavingTruck}
+						/>
+						{#if truckErrors.truckName}
+							<p class="mt-1 text-sm text-red-600">{truckErrors.truckName}</p>
+						{/if}
+					</div>
+					
+					<div>
+						<label for="newPlateNumber" class="block text-sm font-medium text-gray-700 mb-1">
+							Plate Number <span class="text-red-500">*</span>
+						</label>
+						<input
+							type="text"
+							id="newPlateNumber"
+							bind:value={newPlateNumber}
+							placeholder="e.g. VOL-482"
+							on:input={(e) => newPlateNumber = e.target.value.toUpperCase()}
+							class="w-full px-4 py-2.5 border {truckErrors.plateNumber ? 'border-red-300' : 'border-gray-300'} rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none uppercase"
+							required
+							disabled={isSavingTruck}
+						/>
+						{#if truckErrors.plateNumber}
+							<p class="mt-1 text-sm text-red-600">{truckErrors.plateNumber}</p>
+						{/if}
+					</div>
+					
+					<div>
+						<label for="newDriverName" class="block text-sm font-medium text-gray-700 mb-1">
+							Driver Name <span class="text-red-500">*</span>
+						</label>
+						<input
+							type="text"
+							id="newDriverName"
+							bind:value={newDriverName}
+							placeholder="e.g. Mike Ross"
+							class="w-full px-4 py-2.5 border {truckErrors.driverName ? 'border-red-300' : 'border-gray-300'} rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+							required
+							disabled={isSavingTruck}
+						/>
+						{#if truckErrors.driverName}
+							<p class="mt-1 text-sm text-red-600">{truckErrors.driverName}</p>
+						{/if}
+					</div>
+					
+					{#if truckErrors.submit}
+						<div class="bg-red-50 border border-red-200 rounded-lg p-3">
+							<p class="text-sm text-red-600">{truckErrors.submit}</p>
+						</div>
+					{/if}
+					
+					<div class="flex gap-3 pt-4">
+						<button
+							type="button"
+							on:click={closeTruckModal}
+							disabled={isSavingTruck}
+							class="flex-1 px-4 py-2.5 border border-gray-300 rounded-lg font-medium text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+						>
+							Cancel
+						</button>
+						<button
+							type="submit"
+							disabled={isSavingTruck}
+							class="flex-1 px-4 py-2.5 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+						>
+							{#if isSavingTruck}
+								<svg class="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+									<circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+									<path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+								</svg>
+								Adding...
+							{:else}
+								Add Truck
+							{/if}
+						</button>
+					</div>
+				</form>
+			</div>
+		</div>
+	{/if}
 </div>
