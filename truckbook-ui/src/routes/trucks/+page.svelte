@@ -57,13 +57,17 @@
 						
 						const totalTrips = truckTrips.length;
 						const totalRevenue = truckTrips.reduce((sum, trip) => sum + parseFloat(trip.agreedPrice || 0), 0);
-						const totalCost = truckTrips.reduce((sum, trip) => sum + parseFloat(trip.totalCost || 0), 0);
+						
+						// Calculate trip profit WITH maintenance costs (same as trip table calculation)
 						const tripProfit = truckTrips.reduce((sum, trip) => {
-							const profit = parseFloat(trip.totalReceived || 0) - parseFloat(trip.totalCost || 0);
+							const operationalCost = parseFloat(trip.totalCost || 0);
+							const maintenanceCost = parseFloat(trip.truckMaintenanceCost || 0);
+							const totalCost = operationalCost + maintenanceCost;
+							const profit = parseFloat(trip.totalReceived || 0) - totalCost;
 							return sum + profit;
 						}, 0);
 						
-						// Get maintenance records for this truck
+						// Get maintenance records for this truck (for display purposes)
 						let maintenanceTotal = 0;
 						try {
 							const maintenanceResponse = await api.getTruckMaintenance(truck.id);
@@ -76,8 +80,8 @@
 							console.error(`Error loading maintenance for truck ${truck.id}:`, error);
 						}
 						
-						// Net profit = Trip profit - Maintenance costs
-						const netProfit = tripProfit - maintenanceTotal;
+						// Net profit = Sum of trip profits (each already includes its maintenance cost)
+						const netProfit = tripProfit;
 						
 						return {
 							...truck,
