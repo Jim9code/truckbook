@@ -4,7 +4,7 @@
 	import { onMount } from 'svelte';
 	import SkeletonCard from '$lib/components/SkeletonCard.svelte';
 	import SkeletonTableRow from '$lib/components/SkeletonTableRow.svelte';
-	import { api } from '$lib/api.js';
+	import { api, removeToken } from '$lib/api.js';
 	import logo from '$lib/assets/truckbooklogo.png';
 
 	let mobileMenuOpen = false;
@@ -235,7 +235,7 @@
 	});
 
 	function handleLogout() {
-		// TODO: Implement logout
+		removeToken();
 		goto('/login');
 	}
 </script>
@@ -333,45 +333,53 @@
 		{/if}
 		
 		<!-- Header -->
-		<div class="flex justify-between items-center mb-8">
+		<div class="flex flex-col md:flex-row md:justify-between md:items-center gap-4 mb-6 md:mb-8">
 			<div>
-				<h1 class="text-3xl font-bold text-gray-900 mb-2">
+				<h1 class="text-xl sm:text-2xl md:text-3xl font-bold text-gray-900 mb-1 md:mb-2">
 					{companyName ? `${companyName} Trips Dashboard` : 'Trips Dashboard'}
 				</h1>
-				<p class="text-gray-600">Overview of all scheduled and completed hauls.</p>
+				<p class="text-sm md:text-base text-gray-600">Overview of all scheduled and completed hauls.</p>
 			</div>
-			<div class="flex gap-3">
+			<div class="flex flex-wrap gap-2 md:gap-3">
 				{#if planType === 'large-fleet'}
 					<div class="relative">
 						<button
 							on:click={() => handleExport('excel')}
 							disabled={isExporting}
-							class="px-4 py-2 border border-gray-300 rounded-lg font-medium text-gray-700 hover:bg-gray-50 transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+							class="px-3 md:px-4 py-2 border border-gray-300 rounded-lg text-sm md:text-base font-medium text-gray-700 hover:bg-gray-50 transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
 							title="Export to Excel"
 						>
-							<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+							<svg class="w-4 h-4 md:w-5 md:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
 							</svg>
-							{isExporting ? 'Exporting...' : 'Export Excel'}
+							<span class="hidden sm:inline">{isExporting ? 'Exporting...' : 'Export Excel'}</span>
+							<span class="sm:hidden">Excel</span>
 						</button>
 					</div>
 					<div class="relative">
 						<button
 							on:click={() => handleExport('pdf')}
 							disabled={isExporting}
-							class="px-4 py-2 border border-gray-300 rounded-lg font-medium text-gray-700 hover:bg-gray-50 transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+							class="px-3 md:px-4 py-2 border border-gray-300 rounded-lg text-sm md:text-base font-medium text-gray-700 hover:bg-gray-50 transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
 							title="Export to PDF"
 						>
-							<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+							<svg class="w-4 h-4 md:w-5 md:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
 							</svg>
-							{isExporting ? 'Exporting...' : 'Export PDF'}
+							<span class="hidden sm:inline">{isExporting ? 'Exporting...' : 'Export PDF'}</span>
+							<span class="sm:hidden">PDF</span>
 						</button>
 					</div>
 				{/if}
 				<button
+					on:click={() => goto('/trucks')}
+					class="px-3 md:px-4 lg:px-6 py-2 md:py-2.5 border border-gray-300 rounded-lg text-sm md:text-base font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+				>
+					+ Add Truck
+				</button>
+				<button
 					on:click={() => goto('/trips/add')}
-					class="bg-blue-600 text-white px-6 py-2.5 rounded-lg font-medium hover:bg-blue-700 transition-colors"
+					class="px-3 md:px-4 lg:px-6 py-2 md:py-2.5 bg-blue-600 text-white rounded-lg text-sm md:text-base font-medium hover:bg-blue-700 transition-colors"
 				>
 					+ Add Trip
 				</button>

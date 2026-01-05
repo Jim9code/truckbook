@@ -3,7 +3,7 @@
 	import { onMount } from 'svelte';
 	import SkeletonCard from '$lib/components/SkeletonCard.svelte';
 	import SkeletonTableRow from '$lib/components/SkeletonTableRow.svelte';
-	import { api } from '$lib/api.js';
+	import { api, removeToken } from '$lib/api.js';
 	import logo from '$lib/assets/truckbooklogo.png';
 
 	let mobileMenuOpen = false;
@@ -119,6 +119,7 @@
 	}
 
 	function handleLogout() {
+		removeToken();
 		goto('/login');
 	}
 </script>

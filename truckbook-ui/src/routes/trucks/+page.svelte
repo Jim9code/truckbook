@@ -4,7 +4,7 @@
 	import { browser } from '$app/environment';
 	import SkeletonCard from '$lib/components/SkeletonCard.svelte';
 	import SkeletonTableRow from '$lib/components/SkeletonTableRow.svelte';
-	import { api } from '$lib/api.js';
+	import { api, removeToken } from '$lib/api.js';
 	import logo from '$lib/assets/truckbooklogo.png';
 
 	let mobileMenuOpen = false;
@@ -356,6 +356,7 @@
 	}
 
 	function handleLogout() {
+		removeToken();
 		goto('/login');
 	}
 
@@ -446,7 +447,7 @@
 		<div class="flex justify-between items-start mb-8">
 			<div>
 				<h1 class="text-3xl font-bold text-gray-900 mb-2">Fleet Performance</h1>
-				<p class="text-gray-600">Track revenue, costs, and profitability per vehicle.</p>
+				<p class="text-xs sm:text-sm md:text-base text-gray-600">Track revenue, costs, and profitability per vehicle.</p>
 			</div>
 			<div class="flex gap-3">
 				{#if planType === 'large-fleet'}
