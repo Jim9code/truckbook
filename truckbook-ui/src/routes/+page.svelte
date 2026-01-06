@@ -3,6 +3,7 @@
 	import { onMount } from 'svelte';
 	import { browser } from '$app/environment';
 	import { getToken } from '$lib/api.js';
+	import { page } from '$app/stores';
 	import trucking1 from '$lib/assets/Trucking.jpeg';
 	import trucking2 from '$lib/assets/trucking2.jpeg';
 	import trucking3 from '$lib/assets/trucking3.jpeg';
@@ -17,7 +18,57 @@
 			isAuthenticated = !!token;
 		}
 	});
+	
+	const baseUrl = 'https://truckbooks.site';
 </script>
+
+<svelte:head>
+	<title>TruckBooks - Fleet Management & Logistics Operations Software</title>
+	<meta name="description" content="TruckBooks helps logistics business owners manage their fleet finances. Track trips, payments, costs, profit/loss per trip, truck performance, and outstanding customer balances. Built for logistics operators who need clarity and accuracy." />
+	
+	<!-- Open Graph for Landing Page -->
+	<meta property="og:title" content="TruckBooks - Fleet Management & Logistics Operations Software" />
+	<meta property="og:description" content="Manage your fleet's finances in one place. Track trips, payments, costs, and profit or loss per trip. Monitor truck performance and outstanding customer balances." />
+	<meta property="og:image" content={`${baseUrl}${logo}`} />
+	<meta property="og:url" content={`${baseUrl}${$page.url.pathname}`} />
+	
+	<!-- Twitter Card -->
+	<meta name="twitter:title" content="TruckBooks - Fleet Management & Logistics Operations Software" />
+	<meta name="twitter:description" content="Manage your fleet's finances in one place. Track trips, payments, costs, and profit or loss per trip." />
+	<meta name="twitter:image" content={`${baseUrl}${logo}`} />
+	
+	<!-- Structured Data (JSON-LD) -->
+	{@html `
+		<script type="application/ld+json">
+		{
+			"@context": "https://schema.org",
+			"@type": "SoftwareApplication",
+			"name": "TruckBooks",
+			"applicationCategory": "BusinessApplication",
+			"operatingSystem": "Web",
+			"offers": {
+				"@type": "Offer",
+				"price": "39000",
+				"priceCurrency": "NGN"
+			},
+			"description": "Fleet management and logistics operations software for tracking trips, payments, costs, and profitability.",
+			"url": "${baseUrl}",
+			"logo": "${baseUrl}${logo}",
+			"contactPoint": {
+				"@type": "ContactPoint",
+				"email": "officialsyntechhq@gmail.com",
+				"contactType": "Customer Service"
+			},
+			"address": {
+				"@type": "PostalAddress",
+				"streetAddress": "Kuchikau 2 by Cyna Road",
+				"addressLocality": "Abuja",
+				"addressCountry": "NG"
+			}
+		}
+		</script>
+	`}
+</svelte:head>
 
 <div class="min-h-screen bg-gray-50">
 	<!-- Navigation -->
