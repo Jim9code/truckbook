@@ -605,8 +605,10 @@
 									<td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-right">
 										{truck.totalTrips > 0 ? formatCurrency(truck.totalRevenue) : '-'}
 									</td>
-									<td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-right">
-										{formatCurrency(truck.maintenanceTotal)}
+									<td class="px-6 py-4 whitespace-nowrap text-sm text-right">
+										<span class={truck.maintenanceTotal > truck.netProfit ? 'text-red-600 font-medium' : 'text-gray-900'}>
+											{formatCurrency(truck.maintenanceTotal)}
+										</span>
 									</td>
 									<td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-right">
 										{#if truck.totalTrips > 0}

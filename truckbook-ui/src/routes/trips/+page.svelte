@@ -539,19 +539,25 @@
 									</td>
 									<td class="px-6 py-4 text-sm text-gray-900">
 										{#if trip.routes && Array.isArray(trip.routes) && trip.routes.length > 0}
-											<div class="space-y-1">
-												{#each trip.routes as route, index}
-													<div class="flex items-center gap-1">
-														<span class="text-xs text-gray-500">#{index + 1}</span>
-														<span>{route.from} → {route.to}</span>
-														{#if route.date}
-															<span class="text-xs text-gray-400">({new Date(route.date).toLocaleDateString('en-NG', { month: 'short', day: 'numeric' })})</span>
-														{/if}
-													</div>
-												{/each}
+											<div class="flex items-center gap-2">
+												<span class="hover:text-blue-600 hover:underline cursor-pointer">
+													{trip.routes[0].from} → {trip.routes[0].to}
+													{#if trip.routes[0].date}
+														<span class="text-xs text-gray-400 ml-1">
+															({new Date(trip.routes[0].date).toLocaleDateString('en-NG', { month: 'short', day: 'numeric' })})
+														</span>
+													{/if}
+												</span>
+												{#if trip.routes.length > 1}
+													<span class="text-xs text-blue-600 font-medium" title="Click to see all {trip.routes.length} routes">
+														+{trip.routes.length - 1} more
+													</span>
+												{/if}
 											</div>
 										{:else}
-											{trip.routeFrom} → {trip.routeTo}
+											<span class="hover:text-blue-600 hover:underline cursor-pointer">
+												{trip.routeFrom} → {trip.routeTo}
+											</span>
 										{/if}
 									</td>
 									<td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-right">

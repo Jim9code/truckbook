@@ -1322,7 +1322,7 @@
 			role="button"
 			tabindex="0"
 			on:keydown={(e) => {
-				if (e.key === 'Escape' || e.key === 'Enter' || e.key === ' ') {
+				if (e.key === 'Escape') {
 					e.preventDefault();
 					closeTruckModal();
 				}
