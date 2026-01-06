@@ -39,6 +39,10 @@
 	
 	let notes = '';
 
+	// View mode for completed trips
+	let isViewMode = false; // View mode for completed trips
+	let tripData = null; // Store loaded trip data for display
+
 	// Trucks and drivers from API
 	let trucks = [];
 	let drivers = [];
@@ -154,6 +158,12 @@
 			const response = await api.getTrip(id);
 			if (response.success && response.data) {
 				const trip = response.data;
+				tripData = trip; // Store trip data for display
+				
+				// Set view mode if trip is completed
+				isViewMode = trip.status === 'Completed';
+				
+				// Load form data (for edit mode)
 				tripDate = trip.date;
 				selectedTruck = trip.truck;
 				selectedDriver = trip.driver;
@@ -193,6 +203,29 @@
 			isLoadingTrip = false; // Clear loading state
 		}
 	}
+	
+	// Enter edit mode from view mode
+	function enterEditMode() {
+		isViewMode = false;
+	}
+	
+	// Format date for display
+	function formatDisplayDate(dateString) {
+		if (!dateString) return 'N/A';
+		return new Date(dateString).toLocaleDateString('en-NG', { 
+			year: 'numeric', 
+			month: 'long', 
+			day: 'numeric' 
+		});
+	}
+	
+	// Calculate profit for display
+	$: displayProfit = tripData ? (() => {
+		const operationalCost = parseFloat(tripData.totalCost || 0);
+		const maintenanceCost = parseFloat(tripData.truckMaintenanceCost || 0);
+		const totalCost = operationalCost + maintenanceCost;
+		return parseFloat(tripData.totalReceived || 0) - totalCost;
+	})() : 0;
 
 	// Auto-calculated values (read-only, updates live)
 	$: totalCost = (parseFloat(fuelCost) || 0) + (parseFloat(otherCosts) || 0);
@@ -581,36 +614,52 @@
 		<!-- Header -->
 		<div class="flex justify-between items-start mb-8">
 			<div>
-				<h1 class="text-3xl font-bold text-gray-900 mb-2">{isEditMode ? 'Edit Trip' : 'Add New Trip'}</h1>
-				<p class="text-gray-600">Enter trip details, verify payments, and log operational costs.</p>
+				<h1 class="text-3xl font-bold text-gray-900 mb-2">
+					{isEditMode ? (isViewMode ? 'Trip Details' : 'Edit Trip') : 'Add New Trip'}
+				</h1>
+				<p class="text-gray-600">
+					{isViewMode ? 'View trip details and financial summary.' : 'Enter trip details, verify payments, and log operational costs.'}
+				</p>
 			</div>
 			<div class="flex gap-3">
-				<button
-					on:click={handleCancel}
-					disabled={isSaving}
-					class="px-5 py-2.5 border border-gray-300 rounded-lg font-medium text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-				>
-					Cancel
-				</button>
-				<button
-					on:click={handleSave}
-					disabled={isSaving || isLoadingTrip}
-					class="px-5 py-2.5 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-				>
-					{#if isSaving}
-						<svg class="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
-							<circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-							<path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+				{#if isViewMode}
+					<button
+						on:click={enterEditMode}
+						class="px-5 py-2.5 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors flex items-center gap-2"
+					>
+						<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
 						</svg>
-						{isEditMode ? 'Updating...' : 'Saving...'}
-					{:else}
-					<svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-						<path d="M8 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0zM15 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0z" />
-						<path d="M3 4a1 1 0 00-1 1v10a1 1 0 001 1h1.05a2.5 2.5 0 014.9 0H10a1 1 0 001-1V5a1 1 0 00-1-1H3zM14 7a1 1 0 00-1 1v6.05A2.5 2.5 0 0115.95 16H17a1 1 0 001-1v-5a1 1 0 00-.293-.707l-2-2A1 1 0 0015 7h-1z" />
-					</svg>
-					{isEditMode ? 'Update Trip' : 'Save Trip'}
-					{/if}
-				</button>
+						Edit Trip
+					</button>
+				{:else}
+					<button
+						on:click={handleCancel}
+						disabled={isSaving}
+						class="px-5 py-2.5 border border-gray-300 rounded-lg font-medium text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+					>
+						Cancel
+					</button>
+					<button
+						on:click={handleSave}
+						disabled={isSaving || isLoadingTrip}
+						class="px-5 py-2.5 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+					>
+						{#if isSaving}
+							<svg class="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
+								<circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+								<path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+							</svg>
+							{isEditMode ? 'Updating...' : 'Saving...'}
+						{:else}
+						<svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+							<path d="M8 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0zM15 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0z" />
+							<path d="M3 4a1 1 0 00-1 1v10a1 1 0 001 1h1.05a2.5 2.5 0 014.9 0H10a1 1 0 001-1V5a1 1 0 00-1-1H3zM14 7a1 1 0 00-1 1v6.05A2.5 2.5 0 0115.95 16H17a1 1 0 001-1v-5a1 1 0 00-.293-.707l-2-2A1 1 0 0015 7h-1z" />
+						</svg>
+						{isEditMode ? 'Update Trip' : 'Save Trip'}
+						{/if}
+					</button>
+				{/if}
 			</div>
 		</div>
 
@@ -626,6 +675,218 @@
 				</div>
 				<div class="trip-summary">
 					<SkeletonCard />
+				</div>
+			</div>
+		{:else if isViewMode && tripData}
+			<!-- Read-only view for completed trips -->
+			<div class="trip-layout">
+				<!-- Left Column - Details -->
+				<div class="trip-form space-y-6">
+					<!-- Basic Information (read-only) -->
+					<div class="bg-white rounded-lg border border-gray-200 p-6 shadow-sm">
+						<div class="flex items-center gap-3 mb-6">
+							<div class="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+								<svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+								</svg>
+							</div>
+							<h2 class="text-xl font-semibold text-gray-900">Basic Information</h2>
+						</div>
+
+						<div class="grid md:grid-cols-2 gap-6">
+							<div>
+								<p class="text-sm text-gray-600 mb-1">Trip Date</p>
+								<p class="text-base font-medium text-gray-900">{formatDisplayDate(tripData.date)}</p>
+							</div>
+							<div>
+								<p class="text-sm text-gray-600 mb-1">Status</p>
+								<span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">
+									{tripData.status}
+								</span>
+							</div>
+							<div>
+								<p class="text-sm text-gray-600 mb-1">Truck</p>
+								<p class="text-base font-medium text-gray-900">{tripData.truck}</p>
+							</div>
+							<div>
+								<p class="text-sm text-gray-600 mb-1">Driver</p>
+								<p class="text-base font-medium text-gray-900">{tripData.driver}</p>
+							</div>
+							<div>
+								<p class="text-sm text-gray-600 mb-1">Customer</p>
+								<p class="text-base font-medium text-gray-900">{tripData.customer}</p>
+							</div>
+							{#if tripData.returnDate}
+								<div>
+									<p class="text-sm text-gray-600 mb-1">Return Date</p>
+									<p class="text-base font-medium text-gray-900">{formatDisplayDate(tripData.returnDate)}</p>
+								</div>
+							{/if}
+						</div>
+					</div>
+
+					<!-- Routes (read-only) -->
+					<div class="bg-white rounded-lg border border-gray-200 p-6 shadow-sm">
+						<div class="flex items-center gap-3 mb-6">
+							<div class="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+								<svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
+								</svg>
+							</div>
+							<h2 class="text-xl font-semibold text-gray-900">Routes</h2>
+						</div>
+
+						<div class="space-y-3">
+							{#if tripData.routes && Array.isArray(tripData.routes) && tripData.routes.length > 0}
+								{#each tripData.routes as route, index}
+									<div class="flex items-center gap-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
+										<div class="flex-shrink-0 w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+											<span class="text-sm font-semibold text-blue-600">{index + 1}</span>
+										</div>
+										<div class="flex-1">
+											<div class="flex items-center gap-2">
+												<span class="font-medium text-gray-900">{route.from}</span>
+												<svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+													<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3" />
+												</svg>
+												<span class="font-medium text-gray-900">{route.to}</span>
+											</div>
+											{#if route.date}
+												<p class="text-xs text-gray-500 mt-1">{formatDisplayDate(route.date)}</p>
+											{/if}
+										</div>
+									</div>
+								{/each}
+							{:else}
+								<div class="p-4 bg-gray-50 rounded-lg border border-gray-200">
+									<div class="flex items-center gap-2">
+										<span class="font-medium text-gray-900">{tripData.routeFrom}</span>
+										<svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+											<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3" />
+										</svg>
+										<span class="font-medium text-gray-900">{tripData.routeTo}</span>
+									</div>
+								</div>
+							{/if}
+						</div>
+					</div>
+
+					<!-- Payment Details (read-only) -->
+					<div class="bg-white rounded-lg border border-gray-200 p-6 shadow-sm">
+						<div class="flex items-center gap-3 mb-6">
+							<div class="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+								<svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+								</svg>
+							</div>
+							<h2 class="text-xl font-semibold text-gray-900">Payment Details</h2>
+						</div>
+
+						<div class="grid md:grid-cols-2 gap-6">
+							<div>
+								<p class="text-sm text-gray-600 mb-1">Agreed Transport Price</p>
+								<p class="text-lg font-semibold text-gray-900">{formatCurrency(tripData.agreedPrice || 0)}</p>
+							</div>
+							<div>
+								<p class="text-sm text-gray-600 mb-1">Payment Type</p>
+								<p class="text-base font-medium text-gray-900 capitalize">{tripData.paymentType || 'full'}</p>
+							</div>
+							<div>
+								<p class="text-sm text-gray-600 mb-1">Amount Received Before Trip</p>
+								<p class="text-lg font-semibold text-gray-900">{formatCurrency(tripData.amountReceivedBefore || 0)}</p>
+							</div>
+							<div>
+								<p class="text-sm text-gray-600 mb-1">Amount Received After Delivery</p>
+								<p class="text-lg font-semibold text-gray-900">{formatCurrency(tripData.amountReceivedAfter || 0)}</p>
+							</div>
+							<div class="md:col-span-2">
+								<p class="text-sm text-gray-600 mb-1">Total Received</p>
+								<p class="text-2xl font-bold text-gray-900">{formatCurrency(tripData.totalReceived || 0)}</p>
+							</div>
+						</div>
+					</div>
+
+					<!-- Operational Costs (read-only) -->
+					<div class="bg-white rounded-lg border border-gray-200 p-6 shadow-sm">
+						<div class="flex items-center gap-3 mb-6">
+							<div class="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+								<svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+								</svg>
+							</div>
+							<h2 class="text-xl font-semibold text-gray-900">Operational Costs</h2>
+						</div>
+
+						<div class="grid md:grid-cols-3 gap-6">
+							<div>
+								<p class="text-sm text-gray-600 mb-1">Fuel Cost</p>
+								<p class="text-lg font-semibold text-gray-900">{formatCurrency(tripData.fuelCost || 0)}</p>
+							</div>
+							<div>
+								<p class="text-sm text-gray-600 mb-1">Driver Pay</p>
+								<p class="text-lg font-semibold text-gray-900">{formatCurrency(tripData.otherCosts || 0)}</p>
+							</div>
+							<div>
+								<p class="text-sm text-gray-600 mb-1">Total Operational Cost</p>
+								<p class="text-lg font-semibold text-gray-900">{formatCurrency(tripData.totalCost || 0)}</p>
+							</div>
+							{#if tripData.truckMaintenanceCost > 0}
+								<div>
+									<p class="text-sm text-gray-600 mb-1">Maintenance Cost</p>
+									<p class="text-lg font-semibold text-red-600">{formatCurrency(tripData.truckMaintenanceCost || 0)}</p>
+								</div>
+							{/if}
+						</div>
+					</div>
+
+					<!-- Notes (read-only) -->
+					{#if tripData.notes}
+						<div class="bg-white rounded-lg border border-gray-200 p-6 shadow-sm">
+							<div class="flex items-center gap-3 mb-4">
+								<div class="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+									<svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+										<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+									</svg>
+								</div>
+								<h2 class="text-xl font-semibold text-gray-900">Notes</h2>
+							</div>
+							<p class="text-gray-700 whitespace-pre-wrap">{tripData.notes}</p>
+						</div>
+					{/if}
+				</div>
+
+				<!-- Right Column - Summary -->
+				<div class="trip-summary">
+					<div class="bg-white rounded-lg border-2 border-blue-200 p-6 shadow-lg">
+						<div class="flex items-center gap-3 mb-6">
+							<div class="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center">
+								<svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+								</svg>
+							</div>
+							<h2 class="text-xl font-semibold text-gray-900">Summary</h2>
+						</div>
+
+						<div class="space-y-4">
+							<div>
+								<p class="text-sm text-gray-600 mb-1">Total Cost (Operational + Maintenance)</p>
+								<p class="text-2xl font-bold text-gray-900">
+									{formatCurrency((parseFloat(tripData.totalCost || 0) + parseFloat(tripData.truckMaintenanceCost || 0)))}
+								</p>
+							</div>
+							<div>
+								<p class="text-sm text-gray-600 mb-1">Total Received</p>
+								<p class="text-2xl font-bold text-gray-900">{formatCurrency(tripData.totalReceived || 0)}</p>
+							</div>
+							<div class="pt-4 border-t border-gray-200">
+								<p class="text-sm text-gray-600 mb-1">Net Profit / Loss</p>
+								<p class="text-3xl font-bold {displayProfit >= 0 ? 'text-green-600' : 'text-red-600'}">
+									{displayProfit >= 0 ? '+' : ''}{formatCurrency(displayProfit)}
+								</p>
+							</div>
+						</div>
+					</div>
 				</div>
 			</div>
 		{:else}
@@ -736,10 +997,11 @@
 						</div>
 
 						<div class="md:col-span-2">
-							<label class="block text-sm font-medium text-gray-700 mb-3">
+							<!-- Not a real form label; use div to avoid a11y label warning -->
+							<div class="block text-sm font-medium text-gray-700 mb-3">
 								Routes <span class="text-red-500">*</span>
 								<span class="text-xs font-normal text-gray-500 ml-2">(Add multiple routes for trips with multiple stops)</span>
-							</label>
+							</div>
 							<div class="space-y-3">
 								{#each routes as route, index}
 									<div class="flex gap-2 items-end p-3 bg-gray-50 rounded-lg border border-gray-200">
@@ -770,9 +1032,15 @@
 											</div>
 										</div>
 										<div class="flex-1">
-											<label class="block text-xs text-gray-600 mb-1">From</label>
+											<label
+												for={`route-from-${index}`}
+												class="block text-xs text-gray-600 mb-1"
+											>
+												From
+											</label>
 											<input
 												type="text"
+												id={`route-from-${index}`}
 												bind:value={route.from}
 												placeholder="e.g. Dallas, TX"
 												class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none text-sm"
@@ -780,9 +1048,15 @@
 											/>
 										</div>
 										<div class="flex-1">
-											<label class="block text-xs text-gray-600 mb-1">To</label>
+											<label
+												for={`route-to-${index}`}
+												class="block text-xs text-gray-600 mb-1"
+											>
+												To
+											</label>
 											<input
 												type="text"
+												id={`route-to-${index}`}
 												bind:value={route.to}
 												placeholder="e.g. Houston, TX"
 												class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none text-sm"
@@ -790,9 +1064,15 @@
 											/>
 										</div>
 										<div class="flex-1">
-											<label class="block text-xs text-gray-600 mb-1">Date</label>
+											<label
+												for={`route-date-${index}`}
+												class="block text-xs text-gray-600 mb-1"
+											>
+												Date
+											</label>
 											<input
 												type="date"
+												id={`route-date-${index}`}
 												bind:value={route.date}
 												class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none text-sm"
 												required
@@ -1030,14 +1310,38 @@
 	
 	<!-- Add Truck Modal -->
 	{#if showAddTruckModal}
-		<div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" on:click={closeTruckModal}>
-			<div class="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto p-6" on:click|stopPropagation>
+		<div
+			class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+			on:click={closeTruckModal}
+			role="button"
+			tabindex="0"
+			on:keydown={(e) => {
+				if (e.key === 'Escape' || e.key === 'Enter' || e.key === ' ') {
+					e.preventDefault();
+					closeTruckModal();
+				}
+			}}
+		>
+			<div
+				class="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto p-6"
+				on:click|stopPropagation
+				role="dialog"
+				aria-modal="true"
+				tabindex="-1"
+				on:keydown={(e) => {
+					if (e.key === 'Escape') {
+						e.preventDefault();
+						closeTruckModal();
+					}
+				}}
+			>
 				<div class="flex justify-between items-center mb-6">
 					<h2 class="text-2xl font-bold text-gray-900">Add Truck</h2>
 					<button
 						on:click={closeTruckModal}
 						class="text-gray-400 hover:text-gray-600"
 						disabled={isSavingTruck}
+						aria-label="Close add truck modal"
 					>
 						<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
