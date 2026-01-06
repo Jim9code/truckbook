@@ -1,11 +1,22 @@
 <script>
 	import { goto } from '$app/navigation';
+	import { onMount } from 'svelte';
+	import { browser } from '$app/environment';
+	import { getToken } from '$lib/api.js';
 	import trucking1 from '$lib/assets/Trucking.jpeg';
 	import trucking2 from '$lib/assets/trucking2.jpeg';
 	import trucking3 from '$lib/assets/trucking3.jpeg';
 	import logo from '$lib/assets/truckbooklogo.png';
 
 	let mobileMenuOpen = false;
+	let isAuthenticated = false;
+
+	onMount(() => {
+		if (browser) {
+			const token = getToken();
+			isAuthenticated = !!token;
+		}
+	});
 </script>
 
 <div class="min-h-screen bg-gray-50">
@@ -21,18 +32,27 @@
 				<!-- Desktop Navigation -->
 				<div class="hidden md:flex items-center gap-4">
 					<a href="/subscription" class="text-gray-700 hover:text-gray-900 font-medium">Pricing</a>
-					<button
-						on:click={() => goto('/login')}
-						class="text-gray-700 hover:text-gray-900 font-medium"
-					>
-						Log In
-					</button>
-					<button
-						on:click={() => goto('/signup')}
-						class="bg-blue-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-blue-700 transition-colors"
-					>
-						Get Started
-					</button>
+					{#if isAuthenticated}
+						<button
+							on:click={() => goto('/trips')}
+							class="bg-blue-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-blue-700 transition-colors"
+						>
+							Dashboard
+						</button>
+					{:else}
+						<button
+							on:click={() => goto('/login')}
+							class="text-gray-700 hover:text-gray-900 font-medium"
+						>
+							Log In
+						</button>
+						<button
+							on:click={() => goto('/signup')}
+							class="bg-blue-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-blue-700 transition-colors"
+						>
+							Get Started
+						</button>
+					{/if}
 				</div>
 
 				<!-- Mobile menu button -->
@@ -57,18 +77,27 @@
 			{#if mobileMenuOpen}
 				<div class="md:hidden pb-4 space-y-2">
 					<a href="/subscription" class="block px-3 py-2 text-gray-700 hover:text-gray-900 hover:bg-gray-50 rounded-md font-medium">Pricing</a>
-					<button
-						on:click={() => { mobileMenuOpen = false; goto('/login'); }}
-						class="block w-full text-left px-3 py-2 text-gray-700 hover:text-gray-900 hover:bg-gray-50 rounded-md font-medium"
-					>
-						Log In
-					</button>
-					<button
-						on:click={() => { mobileMenuOpen = false; goto('/signup'); }}
-						class="block w-full text-left px-3 py-2 bg-blue-600 text-white rounded-md font-medium hover:bg-blue-700"
-					>
-						Get Started
-					</button>
+					{#if isAuthenticated}
+						<button
+							on:click={() => { mobileMenuOpen = false; goto('/trips'); }}
+							class="block w-full text-left px-3 py-2 bg-blue-600 text-white rounded-md font-medium hover:bg-blue-700"
+						>
+							Dashboard
+						</button>
+					{:else}
+						<button
+							on:click={() => { mobileMenuOpen = false; goto('/login'); }}
+							class="block w-full text-left px-3 py-2 text-gray-700 hover:text-gray-900 hover:bg-gray-50 rounded-md font-medium"
+						>
+							Log In
+						</button>
+						<button
+							on:click={() => { mobileMenuOpen = false; goto('/signup'); }}
+							class="block w-full text-left px-3 py-2 bg-blue-600 text-white rounded-md font-medium hover:bg-blue-700"
+						>
+							Get Started
+						</button>
+					{/if}
 				</div>
 			{/if}
 		</div>
@@ -92,18 +121,27 @@
 					Track trips, payments, costs, and profit or loss per trip. Monitor truck performance and outstanding customer balances.
 				</p>
 				<div class="flex flex-col sm:flex-row gap-4 justify-center">
-					<button
-						on:click={() => goto('/signup')}
-						class="bg-blue-600 text-white px-8 py-3 rounded-lg font-medium hover:bg-blue-700 transition-colors text-lg"
-					>
-						Get Started
-					</button>
-					<button
-						on:click={() => goto('/login')}
-						class="bg-white text-blue-600 px-8 py-3 rounded-lg font-medium hover:bg-gray-100 transition-colors text-lg"
-					>
-						Log In
-					</button>
+					{#if isAuthenticated}
+						<button
+							on:click={() => goto('/trips')}
+							class="bg-blue-600 text-white px-8 py-3 rounded-lg font-medium hover:bg-blue-700 transition-colors text-lg"
+						>
+							Go to Dashboard
+						</button>
+					{:else}
+						<button
+							on:click={() => goto('/signup')}
+							class="bg-blue-600 text-white px-8 py-3 rounded-lg font-medium hover:bg-blue-700 transition-colors text-lg"
+						>
+							Get Started
+						</button>
+						<button
+							on:click={() => goto('/login')}
+							class="bg-white text-blue-600 px-8 py-3 rounded-lg font-medium hover:bg-gray-100 transition-colors text-lg"
+						>
+							Log In
+						</button>
+					{/if}
 				</div>
 			</div>
 		</div>
@@ -262,12 +300,21 @@
 						fleet's performance, and manage customer payments effectively. Every feature is built with the 
 						logistics operator in mind.
 					</p>
-					<button
-						on:click={() => goto('/signup')}
-						class="bg-blue-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-blue-700 transition-colors"
-					>
-						Start Managing Your Fleet
-					</button>
+					{#if isAuthenticated}
+						<button
+							on:click={() => goto('/trips')}
+							class="bg-blue-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-blue-700 transition-colors"
+						>
+							Go to Dashboard
+						</button>
+					{:else}
+						<button
+							on:click={() => goto('/signup')}
+							class="bg-blue-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-blue-700 transition-colors"
+						>
+							Start Managing Your Fleet
+						</button>
+					{/if}
 				</div>
 				<div>
 					<img
@@ -287,20 +334,29 @@
 			<p class="text-xl text-blue-100 mb-8">
 				Join logistics operators who trust TruckBooks to manage their fleet finances.
 			</p>
-			<div class="flex flex-col sm:flex-row gap-4 justify-center">
+			{#if isAuthenticated}
 				<button
-					on:click={() => goto('/signup')}
+					on:click={() => goto('/trips')}
 					class="bg-white text-blue-600 px-8 py-3 rounded-lg font-medium hover:bg-gray-100 transition-colors text-lg"
 				>
-					Get Started Free
+					Go to Dashboard
 				</button>
-				<button
-					on:click={() => goto('/login')}
-					class="bg-transparent text-white border-2 border-white px-8 py-3 rounded-lg font-medium hover:bg-white hover:text-blue-600 transition-colors text-lg"
-				>
-					Log In
-				</button>
-			</div>
+			{:else}
+				<div class="flex flex-col sm:flex-row gap-4 justify-center">
+					<button
+						on:click={() => goto('/signup')}
+						class="bg-white text-blue-600 px-8 py-3 rounded-lg font-medium hover:bg-gray-100 transition-colors text-lg"
+					>
+						Get Started Free
+					</button>
+					<button
+						on:click={() => goto('/login')}
+						class="bg-transparent text-white border-2 border-white px-8 py-3 rounded-lg font-medium hover:bg-white hover:text-blue-600 transition-colors text-lg"
+					>
+						Log In
+					</button>
+				</div>
+			{/if}
 		</div>
 	</section>
 

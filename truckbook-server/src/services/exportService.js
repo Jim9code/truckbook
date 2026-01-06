@@ -175,7 +175,7 @@ export const exportTripsToExcel = async (userId, filters = {}) => {
     }
   });
 
-  // Add totals row (removed maintenance cost)
+  // Add totals row (with maintenance cost included in profit)
   const totalsRow = headerRow + 1 + trips.length;
   worksheet.getRow(totalsRow).values = [
     'TOTALS',
@@ -186,7 +186,10 @@ export const exportTripsToExcel = async (userId, filters = {}) => {
     trips.reduce((sum, trip) => sum + parseFloat(trip.agreedPrice || 0), 0),
     trips.reduce((sum, trip) => sum + parseFloat(trip.totalCost || 0), 0),
     trips.reduce((sum, trip) => {
-      const profit = parseFloat(trip.totalReceived || 0) - parseFloat(trip.totalCost || 0);
+      const operationalCost = parseFloat(trip.totalCost || 0);
+      const maintenanceCost = parseFloat(trip.truckMaintenanceCost || 0);
+      const totalCost = operationalCost + maintenanceCost;
+      const profit = parseFloat(trip.totalReceived || 0) - totalCost;
       return sum + profit;
     }, 0),
     '',
@@ -374,7 +377,7 @@ export const exportTrucksToExcel = async (userId) => {
     order: [['createdAt', 'DESC']]
   });
 
-  // Get all trips for calculations
+  // Get all trips for calculations (sorted by date ASC for maintenance calculation)
   const allTrips = await Trip.findAll({
     where: { userId },
     include: [
@@ -383,7 +386,8 @@ export const exportTrucksToExcel = async (userId) => {
         as: 'truck',
         attributes: ['id', 'name', 'plateNumber']
       }
-    ]
+    ],
+    order: [['date', 'ASC'], ['createdAt', 'ASC']]
   });
 
   // Get all maintenance records
@@ -396,7 +400,7 @@ export const exportTrucksToExcel = async (userId) => {
         attributes: ['id', 'name', 'plateNumber']
       }
     ],
-    order: [['date', 'DESC']]
+    order: [['date', 'ASC']]
   });
 
   // Create workbook
@@ -457,21 +461,50 @@ export const exportTrucksToExcel = async (userId) => {
     const truckFormat = `${truck.name} #${truck.plateNumber}`;
     const truckTrips = allTrips.filter(trip => 
       trip.truck && `${trip.truck.name} #${trip.truck.plateNumber}` === truckFormat
-    );
+    ).sort((a, b) => {
+      const dateA = new Date(a.date || 0);
+      const dateB = new Date(b.date || 0);
+      if (dateA.getTime() !== dateB.getTime()) {
+        return dateA - dateB;
+      }
+      return new Date(a.createdAt || 0) - new Date(b.createdAt || 0);
+    });
     
     const totalTrips = truckTrips.length;
     const totalRevenue = truckTrips.reduce((sum, trip) => sum + parseFloat(trip.agreedPrice || 0), 0);
-    const totalCost = truckTrips.reduce((sum, trip) => sum + parseFloat(trip.totalCost || 0), 0);
+    
+    // Calculate trip profit WITH maintenance costs (per trip period, not cumulative)
+    let previousTripDate = null;
+    
     const tripProfit = truckTrips.reduce((sum, trip) => {
-      const profit = parseFloat(trip.totalReceived || 0) - parseFloat(trip.totalCost || 0);
+      const operationalCost = parseFloat(trip.totalCost || 0);
+      
+      // Calculate maintenance for this trip period
+      const tripDate = new Date(trip.date || new Date());
+      const maintenanceCost = allMaintenance
+        .filter(m => {
+          if (m.truckId !== truck.id) return false;
+          const maintDate = new Date(m.date);
+          if (maintDate > tripDate) return false;
+          if (previousTripDate && maintDate <= previousTripDate) return false;
+          return true;
+        })
+        .reduce((sum, record) => sum + parseFloat(record.amount || 0), 0);
+      
+      previousTripDate = tripDate;
+      
+      const totalCost = operationalCost + maintenanceCost;
+      const profit = parseFloat(trip.totalReceived || 0) - totalCost;
       return sum + profit;
     }, 0);
     
+    // Maintenance total is the sum of all maintenance for this truck
     const maintenanceTotal = allMaintenance
       .filter(m => m.truckId === truck.id)
       .reduce((sum, record) => sum + parseFloat(record.amount || 0), 0);
     
-    const netProfit = tripProfit - maintenanceTotal;
+    // Net profit = Sum of trip profits (each already includes its maintenance cost)
+    const netProfit = tripProfit;
     
     return {
       name: truck.name,
@@ -625,16 +658,17 @@ export const exportTrucksToPDF = async (userId) => {
     order: [['createdAt', 'DESC']]
   });
 
-  // Get all trips and maintenance (same as Excel)
+  // Get all trips and maintenance (sorted by date ASC for maintenance calculation)
   const allTrips = await Trip.findAll({
     where: { userId },
-    include: [{ model: Truck, as: 'truck', attributes: ['id', 'name', 'plateNumber'] }]
+    include: [{ model: Truck, as: 'truck', attributes: ['id', 'name', 'plateNumber'] }],
+    order: [['date', 'ASC'], ['createdAt', 'ASC']]
   });
 
   const allMaintenance = await MaintenanceRecord.findAll({
     where: { userId },
     include: [{ model: Truck, as: 'truck', attributes: ['id', 'name', 'plateNumber'] }],
-    order: [['date', 'DESC']]
+    order: [['date', 'ASC']]
   });
 
   // Create PDF
@@ -666,13 +700,40 @@ export const exportTrucksToPDF = async (userId) => {
       const truckFormat = `${truck.name} #${truck.plateNumber}`;
       const truckTrips = allTrips.filter(trip => 
         trip.truck && `${trip.truck.name} #${trip.truck.plateNumber}` === truckFormat
-      );
+      ).sort((a, b) => {
+        const dateA = new Date(a.date || 0);
+        const dateB = new Date(b.date || 0);
+        if (dateA.getTime() !== dateB.getTime()) {
+          return dateA - dateB;
+        }
+        return new Date(a.createdAt || 0) - new Date(b.createdAt || 0);
+      });
       
       const totalTrips = truckTrips.length;
       const totalRevenue = truckTrips.reduce((sum, trip) => sum + parseFloat(trip.agreedPrice || 0), 0);
-      const totalCost = truckTrips.reduce((sum, trip) => sum + parseFloat(trip.totalCost || 0), 0);
+      
+      // Calculate trip profit WITH maintenance costs (per trip period, not cumulative)
+      let previousTripDate = null;
+      
       const tripProfit = truckTrips.reduce((sum, trip) => {
-        const profit = parseFloat(trip.totalReceived || 0) - parseFloat(trip.totalCost || 0);
+        const operationalCost = parseFloat(trip.totalCost || 0);
+        
+        // Calculate maintenance for this trip period
+        const tripDate = new Date(trip.date || new Date());
+        const maintenanceCost = allMaintenance
+          .filter(m => {
+            if (m.truckId !== truck.id) return false;
+            const maintDate = new Date(m.date);
+            if (maintDate > tripDate) return false;
+            if (previousTripDate && maintDate <= previousTripDate) return false;
+            return true;
+          })
+          .reduce((sum, record) => sum + parseFloat(record.amount || 0), 0);
+        
+        previousTripDate = tripDate;
+        
+        const totalCost = operationalCost + maintenanceCost;
+        const profit = parseFloat(trip.totalReceived || 0) - totalCost;
         return sum + profit;
       }, 0);
       
@@ -680,9 +741,10 @@ export const exportTrucksToPDF = async (userId) => {
         .filter(m => m.truckId === truck.id)
         .reduce((sum, record) => sum + parseFloat(record.amount || 0), 0);
       
-      const netProfit = tripProfit - maintenanceTotal;
+      // Net profit = Sum of trip profits (each already includes its maintenance cost)
+      const netProfit = tripProfit;
       
-      return { truck, totalTrips, totalRevenue, totalCost, maintenanceTotal, netProfit };
+      return { truck, totalTrips, totalRevenue, maintenanceTotal, netProfit };
     });
 
     // Summary statistics

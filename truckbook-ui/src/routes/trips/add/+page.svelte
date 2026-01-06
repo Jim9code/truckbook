@@ -254,7 +254,13 @@
 		const defaultDate = routes.length > 0 && routes[routes.length - 1].date 
 			? routes[routes.length - 1].date 
 			: tripDate || '';
-		routes = [...routes, { from: '', to: '', date: defaultDate }];
+		
+		// Pre-fill "from" with the previous route's "to" destination
+		const previousTo = routes.length > 0 && routes[routes.length - 1].to
+			? routes[routes.length - 1].to.trim()
+			: '';
+		
+		routes = [...routes, { from: previousTo, to: '', date: defaultDate }];
 	}
 	
 	function removeRoute(index) {

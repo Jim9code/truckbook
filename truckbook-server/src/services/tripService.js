@@ -122,7 +122,20 @@ export const getUserTrips = async (userId, filters = {}, planType = null) => {
   });
 
   // Get maintenance costs for all trucks in parallel
-  const tripsWithMaintenance = await Promise.all(trips.map(async (trip) => {
+  // IMPORTANT: We need to sort trips by date ASC first to calculate maintenance per period
+  const tripsSorted = [...trips].sort((a, b) => {
+    const dateA = new Date(a.date || 0);
+    const dateB = new Date(b.date || 0);
+    if (dateA.getTime() !== dateB.getTime()) {
+      return dateA - dateB;
+    }
+    return new Date(a.createdAt || 0) - new Date(b.createdAt || 0);
+  });
+
+  // Create a map to track previous trip dates per truck
+  const truckPreviousTripDates = new Map();
+
+  const tripsWithMaintenance = await Promise.all(tripsSorted.map(async (trip) => {
     const tripData = trip.toJSON();
     
     // Format truck as "Truck Name #Plate Number" for frontend
@@ -130,24 +143,36 @@ export const getUserTrips = async (userId, filters = {}, planType = null) => {
       const truckId = trip.truckId || (trip.truck && trip.truck.id);
       tripData.truck = `${tripData.truck.name} #${tripData.truck.plateNumber}`;
       
-      // Get maintenance cost for this truck (all time, up to trip date)
+      // Get maintenance cost for this truck (only for this trip period, not cumulative)
       if (truckId) {
         try {
-          // Get total maintenance cost for the truck up to the trip date
           const { MaintenanceRecord } = await getModels();
           const { Op } = await import('sequelize');
           
-          const maintenanceTotal = await MaintenanceRecord.sum('amount', {
-            where: {
-              truckId,
-              userId,
-              date: {
-                [Op.lte]: tripData.date || new Date()
-              }
+          const tripDate = new Date(tripData.date || new Date());
+          const previousTripDate = truckPreviousTripDates.get(truckId);
+          
+          // Calculate maintenance cost between previous trip and this trip
+          const maintenanceWhere = {
+            truckId,
+            userId,
+            date: {
+              [Op.lte]: tripDate
             }
+          };
+          
+          if (previousTripDate) {
+            maintenanceWhere.date[Op.gt] = previousTripDate;
+          }
+          
+          const maintenanceTotal = await MaintenanceRecord.sum('amount', {
+            where: maintenanceWhere
           });
           
           tripData.truckMaintenanceCost = parseFloat(maintenanceTotal) || 0;
+          
+          // Update the previous trip date for this truck
+          truckPreviousTripDates.set(truckId, tripDate);
         } catch (error) {
           console.error(`Error fetching maintenance for truck ${truckId}:`, error);
           tripData.truckMaintenanceCost = 0;
@@ -170,6 +195,16 @@ export const getUserTrips = async (userId, filters = {}, planType = null) => {
     
     return tripData;
   }));
+  
+  // Re-sort by original order (date DESC, createdAt DESC)
+  tripsWithMaintenance.sort((a, b) => {
+    const dateA = new Date(a.date || 0);
+    const dateB = new Date(b.date || 0);
+    if (dateA.getTime() !== dateB.getTime()) {
+      return dateB - dateA;
+    }
+    return new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
+  });
   
   return tripsWithMaintenance;
 };
@@ -574,30 +609,84 @@ export const getTripStatistics = async (userId, filters = {}, planType = null) =
     whereClause.status = filters.status;
   }
 
+  // Get trips with truck information for maintenance calculation
   const trips = await Trip.findAll({
     where: whereClause,
+    include: [
+      {
+        model: (await getModels()).Truck,
+        as: 'truck',
+        attributes: ['id']
+      }
+    ],
     attributes: [
+      'id',
       'agreedPrice',
       'totalReceived',
       'totalCost',
-      'status'
-    ]
+      'status',
+      'date',
+      'truckId',
+      'createdAt'
+    ],
+    order: [['date', 'ASC'], ['createdAt', 'ASC']]
   });
 
-  const totalRevenue = trips.reduce((sum, trip) => sum + parseFloat(trip.agreedPrice || 0), 0);
-  const totalProfit = trips.reduce((sum, trip) => {
-    const profit = parseFloat(trip.totalReceived || 0) - parseFloat(trip.totalCost || 0);
+  // Calculate maintenance cost per trip (non-cumulative)
+  const { MaintenanceRecord } = await getModels();
+  const truckPreviousTripDates = new Map();
+  const tripsWithMaintenance = await Promise.all(trips.map(async (trip) => {
+    const tripData = trip.toJSON();
+    
+    const tripDate = new Date(trip.date || new Date());
+    const previousTripDate = trip.truckId ? truckPreviousTripDates.get(trip.truckId) : null;
+    
+    // Calculate maintenance for this trip period only
+    let maintenanceCost = 0;
+    if (trip.truckId) {
+      const maintenanceWhere = {
+        truckId: trip.truckId,
+        userId,
+        date: {
+          [Op.lte]: tripDate
+        }
+      };
+      
+      if (previousTripDate) {
+        maintenanceWhere.date[Op.gt] = previousTripDate;
+      }
+      
+      maintenanceCost = await MaintenanceRecord.sum('amount', {
+        where: maintenanceWhere
+      }) || 0;
+      
+      // Update the previous trip date for this truck
+      truckPreviousTripDates.set(trip.truckId, tripDate);
+    }
+    
+    return {
+      ...tripData,
+      maintenanceCost: parseFloat(maintenanceCost)
+    };
+  }));
+
+  const totalRevenue = tripsWithMaintenance.reduce((sum, trip) => sum + parseFloat(trip.agreedPrice || 0), 0);
+  const totalProfit = tripsWithMaintenance.reduce((sum, trip) => {
+    const operationalCost = parseFloat(trip.totalCost || 0);
+    const maintenanceCost = parseFloat(trip.maintenanceCost || 0);
+    const totalCost = operationalCost + maintenanceCost;
+    const profit = parseFloat(trip.totalReceived || 0) - totalCost;
     return sum + profit;
   }, 0);
-  const activeTrips = trips.filter(trip => trip.status === 'Pending').length;
-  const completedTrips = trips.filter(trip => trip.status === 'Completed').length;
+  const activeTrips = tripsWithMaintenance.filter(trip => trip.status === 'Pending').length;
+  const completedTrips = tripsWithMaintenance.filter(trip => trip.status === 'Completed').length;
 
   return {
     totalRevenue,
     totalProfit,
     activeTrips,
     completedTrips,
-    totalTrips: trips.length
+    totalTrips: tripsWithMaintenance.length
   };
 };
 
