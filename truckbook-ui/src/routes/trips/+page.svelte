@@ -537,10 +537,10 @@
 									<td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
 										{trip.customer}
 									</td>
-									<td class="px-6 py-4 text-sm text-gray-900">
+									<td class="px-6 py-4 text-sm text-gray-900 max-w-[200px] sm:max-w-none">
 										{#if trip.routes && Array.isArray(trip.routes) && trip.routes.length > 0}
 											<div class="flex items-center gap-2">
-												<span class="hover:text-blue-600 hover:underline cursor-pointer">
+												<span class="hover:text-blue-600 hover:underline cursor-pointer truncate" title="{trip.routes[0].from} → {trip.routes[0].to}">
 													{trip.routes[0].from} → {trip.routes[0].to}
 													{#if trip.routes[0].date}
 														<span class="text-xs text-gray-400 ml-1">
@@ -549,13 +549,13 @@
 													{/if}
 												</span>
 												{#if trip.routes.length > 1}
-													<span class="text-xs text-blue-600 font-medium" title="Click to see all {trip.routes.length} routes">
+													<span class="text-xs text-blue-600 font-medium flex-shrink-0" title="Click to see all {trip.routes.length} routes">
 														+{trip.routes.length - 1} more
 													</span>
 												{/if}
 											</div>
 										{:else}
-											<span class="hover:text-blue-600 hover:underline cursor-pointer">
+											<span class="hover:text-blue-600 hover:underline cursor-pointer truncate max-w-[200px] sm:max-w-none" title="{trip.routeFrom} → {trip.routeTo}">
 												{trip.routeFrom} → {trip.routeTo}
 											</span>
 										{/if}
