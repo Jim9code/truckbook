@@ -20,6 +20,7 @@
 	});
 	
 	const baseUrl = 'https://truckbooks.site';
+	const logoUrl = `${baseUrl}/truckbookicon.png`;
 </script>
 
 <svelte:head>
@@ -29,13 +30,13 @@
 	<!-- Open Graph for Landing Page -->
 	<meta property="og:title" content="TruckBooks - Fleet Management & Logistics Operations Software" />
 	<meta property="og:description" content="Manage your fleet's finances in one place. Track trips, payments, costs, and profit or loss per trip. Monitor truck performance and outstanding customer balances." />
-	<meta property="og:image" content={`${baseUrl}${logo}`} />
+	<meta property="og:image" content={logoUrl} />
 	<meta property="og:url" content={`${baseUrl}${$page.url.pathname}`} />
 	
 	<!-- Twitter Card -->
 	<meta name="twitter:title" content="TruckBooks - Fleet Management & Logistics Operations Software" />
 	<meta name="twitter:description" content="Manage your fleet's finances in one place. Track trips, payments, costs, and profit or loss per trip." />
-	<meta name="twitter:image" content={`${baseUrl}${logo}`} />
+	<meta name="twitter:image" content={logoUrl} />
 	
 	<!-- Structured Data (JSON-LD) -->
 	{@html `
@@ -53,7 +54,7 @@
 			},
 			"description": "Fleet management and logistics operations software for tracking trips, payments, costs, and profitability.",
 			"url": "${baseUrl}",
-			"logo": "${baseUrl}${logo}",
+			"logo": "${logoUrl}",
 			"contactPoint": {
 				"@type": "ContactPoint",
 				"email": "officialsyntechhq@gmail.com",

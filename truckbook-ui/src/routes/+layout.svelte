@@ -1,7 +1,6 @@
 <script>
 	import './layout.css';
 	import favicon from '$lib/assets/truckbookicon.png';
-	import logo from '$lib/assets/truckbooklogo.png';
 	import { page } from '$app/stores';
 
 	let { children } = $props();
@@ -9,6 +8,9 @@
 	// Base URL for the site
 	$: baseUrl = 'https://truckbooks.site';
 	$: currentUrl = baseUrl + $page.url.pathname;
+	
+	// Logo URL - use static folder for predictable public URL
+	const logoUrl = `${baseUrl}/truckbookicon.png`;
 </script>
 
 <svelte:head>
@@ -29,7 +31,7 @@
 	<meta property="og:url" content={currentUrl} />
 	<meta property="og:title" content="TruckBooks - Fleet Management & Logistics Operations Software" />
 	<meta property="og:description" content="Manage your fleet's finances in one place. Track trips, payments, costs, and profit or loss per trip. Monitor truck performance and outstanding customer balances." />
-	<meta property="og:image" content={`${baseUrl}${logo}`} />
+	<meta property="og:image" content={logoUrl} />
 	<meta property="og:image:width" content="1200" />
 	<meta property="og:image:height" content="630" />
 	<meta property="og:site_name" content="TruckBooks" />
@@ -39,6 +41,6 @@
 	<meta name="twitter:url" content={currentUrl} />
 	<meta name="twitter:title" content="TruckBooks - Fleet Management & Logistics Operations Software" />
 	<meta name="twitter:description" content="Manage your fleet's finances in one place. Track trips, payments, costs, and profit or loss per trip." />
-	<meta name="twitter:image" content={`${baseUrl}${logo}`} />
+	<meta name="twitter:image" content={logoUrl} />
 </svelte:head>
 {@render children()}
