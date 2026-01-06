@@ -151,19 +151,54 @@ export const validateTrip = [
     .isLength({ min: 2, max: 255 })
     .withMessage('Customer name must be between 2 and 255 characters'),
   
+  // Make routeFrom and routeTo optional (for backward compatibility)
   body('routeFrom')
+    .optional({ nullable: true, checkFalsy: true })
     .trim()
-    .notEmpty()
-    .withMessage('Route (From) is required')
     .isLength({ min: 2, max: 255 })
     .withMessage('Route (From) must be between 2 and 255 characters'),
   
   body('routeTo')
+    .optional({ nullable: true, checkFalsy: true })
     .trim()
-    .notEmpty()
-    .withMessage('Route (To) is required')
     .isLength({ min: 2, max: 255 })
     .withMessage('Route (To) must be between 2 and 255 characters'),
+  
+  // Validate routes array (new format)
+  body('routes')
+    .optional({ nullable: true, checkFalsy: true })
+    .isArray()
+    .withMessage('Routes must be an array')
+    .custom((routes) => {
+      if (!routes || routes.length === 0) {
+        return true; // Allow empty array, will be validated by custom check
+      }
+      // Validate each route object
+      for (let i = 0; i < routes.length; i++) {
+        const route = routes[i];
+        if (!route.from || typeof route.from !== 'string' || route.from.trim().length < 2) {
+          throw new Error(`Route ${i + 1}: "from" must be a string with at least 2 characters`);
+        }
+        if (!route.to || typeof route.to !== 'string' || route.to.trim().length < 2) {
+          throw new Error(`Route ${i + 1}: "to" must be a string with at least 2 characters`);
+        }
+        if (route.date && !/^\d{4}-\d{2}-\d{2}$/.test(route.date)) {
+          throw new Error(`Route ${i + 1}: "date" must be in YYYY-MM-DD format`);
+        }
+      }
+      return true;
+    }),
+  
+  // Custom validation: ensure at least one route is provided (either routes array or routeFrom/routeTo)
+  body().custom((body) => {
+    const hasRoutes = body.routes && Array.isArray(body.routes) && body.routes.length > 0;
+    const hasOldFormat = body.routeFrom && body.routeTo;
+    
+    if (!hasRoutes && !hasOldFormat) {
+      throw new Error('Either routes array or routeFrom/routeTo must be provided');
+    }
+    return true;
+  }),
   
   body('status')
     .optional()
@@ -205,6 +240,11 @@ export const validateTrip = [
     .optional()
     .isFloat({ min: 0 })
     .withMessage('Other costs must be a non-negative number'),
+  
+  body('returnDate')
+    .optional({ nullable: true, checkFalsy: true })
+    .isISO8601()
+    .withMessage('Return date must be a valid date'),
   
   handleValidationErrors
 ];
