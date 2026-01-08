@@ -18,6 +18,7 @@
 	let toastType = 'success';
 	let showToast = false;
 	let isAuthenticated = false;
+	let showManageSection = false; // Toggle for manage section
 
 	function showToastMessage(message, type = 'success') {
 		toastMessage = message;
@@ -126,6 +127,41 @@
 			isCancelling = false;
 		}
 	}
+
+	// Helper functions to determine button states
+	function getCurrentPlanType() {
+		return subscriptionStatus?.subscription?.planType || null;
+	}
+
+	function isCurrentPlan(planType) {
+		const currentPlan = getCurrentPlanType();
+		if (!currentPlan) return false;
+		return currentPlan === planType;
+	}
+
+	function shouldShowUpgrade(planType) {
+		const currentPlan = getCurrentPlanType();
+		if (!currentPlan) return false;
+		// Show upgrade if user is on starter and viewing large-fleet
+		return currentPlan === 'starter' && planType === 'large-fleet';
+	}
+
+	function getButtonText(planType) {
+		if (!isAuthenticated) return 'Log In to Subscribe';
+		if (isLoading) return 'Processing...';
+		if (isCurrentPlan(planType)) return 'Current Plan';
+		if (shouldShowUpgrade(planType)) return 'Upgrade to Large Fleet';
+		if (planType === 'starter') return 'Start Starter Plan';
+		if (planType === 'large-fleet') return 'Start Large Fleet Plan';
+		return 'Subscribe';
+	}
+
+	function isButtonDisabled(planType) {
+		if (!isAuthenticated) return true;
+		if (isLoading) return true;
+		if (isCurrentPlan(planType)) return true;
+		return false;
+	}
 </script>
 
 <Toast bind:show={showToast} message={toastMessage} type={toastType} />
@@ -160,91 +196,7 @@
 			<div class="text-center py-12">
 				<div class="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
 			</div>
-		{:else if subscriptionStatus?.hasActiveSubscription && subscriptionStatus?.subscription}
-			<!-- Current Subscription View -->
-			<div class="max-w-3xl mx-auto">
-				<div class="text-center mb-8">
-					<h1 class="text-4xl font-bold text-gray-900 mb-4">Your Subscription</h1>
-					<p class="text-xl text-gray-600">Manage your current plan</p>
-				</div>
-
-				<div class="bg-white rounded-lg border-2 border-blue-600 p-8 shadow-lg">
-					<div class="flex items-center justify-between mb-6">
-						<div>
-							<h2 class="text-2xl font-bold text-gray-900 mb-2">
-								{subscriptionStatus.subscription.planType === 'starter' ? 'Starter Plan' : 'Large Fleet Plan'}
-							</h2>
-							<p class="text-gray-600">Active Subscription</p>
-						</div>
-						<div class="text-right">
-							<div class="text-3xl font-bold text-gray-900">
-								₦{subscriptionStatus.subscription.price?.toLocaleString('en-NG') || (subscriptionStatus.subscription.planType === 'starter' ? '39,000' : '99,000')}
-							</div>
-							<p class="text-gray-600 text-sm">per month</p>
-						</div>
-					</div>
-
-					<div class="border-t border-gray-200 pt-6 mb-6">
-						<div class="grid md:grid-cols-2 gap-4 text-sm">
-							<div>
-								<p class="text-gray-500 mb-1">Status</p>
-								{#if subscriptionStatus.subscription.cancelled}
-									<p class="font-semibold text-orange-600">Cancelled - Expires {new Date(subscriptionStatus.subscription.endDate).toLocaleDateString('en-NG')}</p>
-								{:else}
-									<p class="font-semibold text-green-600 capitalize">{subscriptionStatus.subscription.status}</p>
-								{/if}
-							</div>
-							<div>
-								<p class="text-gray-500 mb-1">Start Date</p>
-								<p class="font-semibold text-gray-900">
-									{subscriptionStatus.subscription.startDate ? new Date(subscriptionStatus.subscription.startDate).toLocaleDateString('en-NG') : 'N/A'}
-								</p>
-							</div>
-							<div>
-								<p class="text-gray-500 mb-1">End Date</p>
-								<p class="font-semibold text-gray-900">
-									{subscriptionStatus.subscription.endDate ? new Date(subscriptionStatus.subscription.endDate).toLocaleDateString('en-NG') : 'N/A'}
-								</p>
-							</div>
-							{#if subscriptionStatus.subscription.nextPaymentDate}
-								<div>
-									<p class="text-gray-500 mb-1">Next Payment</p>
-									<p class="font-semibold text-gray-900">
-										{new Date(subscriptionStatus.subscription.nextPaymentDate).toLocaleDateString('en-NG')}
-									</p>
-								</div>
-							{/if}
-						</div>
-					</div>
-
-					<div class="flex gap-4">
-						{#if subscriptionStatus.subscription.cancelled}
-							<button
-								disabled
-								class="flex-1 bg-gray-300 text-gray-600 py-3 rounded-lg font-medium cursor-not-allowed"
-							>
-								Already Cancelled
-							</button>
-						{:else}
-							<button
-								on:click={handleCancelSubscription}
-								disabled={isCancelling}
-								class="flex-1 bg-red-600 text-white py-3 rounded-lg font-medium hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-							>
-								{isCancelling ? 'Cancelling...' : 'Cancel Subscription'}
-							</button>
-						{/if}
-						<button
-							on:click={() => goto('/trips')}
-							class="flex-1 bg-gray-100 text-gray-900 py-3 rounded-lg font-medium hover:bg-gray-200 transition-colors"
-						>
-							Back to Dashboard
-						</button>
-					</div>
-				</div>
-			</div>
 		{:else}
-			<!-- Plan Selection View -->
 			<!-- Header -->
 			<div class="text-center mb-12">
 				<h1 class="text-4xl font-bold text-gray-900 mb-4">Choose a plan that fits your fleet</h1>
@@ -252,6 +204,96 @@
 					Simple, transparent pricing for your logistics business. Scale your operations without worrying about hidden costs.
 				</p>
 			</div>
+
+			<!-- Manage Subscription Section (if user has active subscription) -->
+			{#if isAuthenticated && subscriptionStatus?.hasActiveSubscription && subscriptionStatus?.subscription}
+				<div class="max-w-5xl mx-auto mb-8">
+					<div class="bg-white rounded-lg border-2 border-blue-600 p-6 shadow-lg">
+						<div class="flex items-center justify-between mb-4">
+							<div>
+								<h2 class="text-xl font-bold text-gray-900 mb-1">
+									{subscriptionStatus.subscription.planType === 'starter' ? 'Starter Plan' : 'Large Fleet Plan'}
+								</h2>
+								<p class="text-gray-600 text-sm">Your Current Subscription</p>
+							</div>
+							<div class="flex items-center gap-3">
+								<div class="text-right">
+									<div class="text-2xl font-bold text-gray-900">
+										₦{subscriptionStatus.subscription.price?.toLocaleString('en-NG') || (subscriptionStatus.subscription.planType === 'starter' ? '39,000' : '99,000')}
+									</div>
+									<p class="text-gray-600 text-xs">per month</p>
+								</div>
+								<button
+									on:click={() => showManageSection = !showManageSection}
+									class="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
+								>
+									{showManageSection ? 'Hide Details' : 'Manage'}
+								</button>
+							</div>
+						</div>
+
+						{#if showManageSection}
+							<div class="border-t border-gray-200 pt-4 mt-4">
+								<div class="grid md:grid-cols-2 gap-4 text-sm mb-4">
+									<div>
+										<p class="text-gray-500 mb-1">Status</p>
+										{#if subscriptionStatus.subscription.cancelled}
+											<p class="font-semibold text-orange-600">Cancelled - Expires {new Date(subscriptionStatus.subscription.endDate).toLocaleDateString('en-NG')}</p>
+										{:else}
+											<p class="font-semibold text-green-600 capitalize">{subscriptionStatus.subscription.status}</p>
+										{/if}
+									</div>
+									<div>
+										<p class="text-gray-500 mb-1">Start Date</p>
+										<p class="font-semibold text-gray-900">
+											{subscriptionStatus.subscription.startDate ? new Date(subscriptionStatus.subscription.startDate).toLocaleDateString('en-NG') : 'N/A'}
+										</p>
+									</div>
+									<div>
+										<p class="text-gray-500 mb-1">End Date</p>
+										<p class="font-semibold text-gray-900">
+											{subscriptionStatus.subscription.endDate ? new Date(subscriptionStatus.subscription.endDate).toLocaleDateString('en-NG') : 'N/A'}
+										</p>
+									</div>
+									{#if subscriptionStatus.subscription.nextPaymentDate}
+										<div>
+											<p class="text-gray-500 mb-1">Next Payment</p>
+											<p class="font-semibold text-gray-900">
+												{new Date(subscriptionStatus.subscription.nextPaymentDate).toLocaleDateString('en-NG')}
+											</p>
+										</div>
+									{/if}
+								</div>
+
+								<div class="flex gap-4">
+									{#if subscriptionStatus.subscription.cancelled}
+										<button
+											disabled
+											class="flex-1 bg-gray-300 text-gray-600 py-3 rounded-lg font-medium cursor-not-allowed"
+										>
+											Already Cancelled
+										</button>
+									{:else}
+										<button
+											on:click={handleCancelSubscription}
+											disabled={isCancelling}
+											class="flex-1 bg-red-600 text-white py-3 rounded-lg font-medium hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+										>
+											{isCancelling ? 'Cancelling...' : 'Cancel Subscription'}
+										</button>
+									{/if}
+									<button
+										on:click={() => goto('/trips')}
+										class="flex-1 bg-gray-100 text-gray-900 py-3 rounded-lg font-medium hover:bg-gray-200 transition-colors"
+									>
+										Back to Dashboard
+									</button>
+								</div>
+							</div>
+						{/if}
+					</div>
+				</div>
+			{/if}
 
 			<!-- Authentication Required Message -->
 			{#if !isAuthenticated}
@@ -285,7 +327,14 @@
 			<!-- Pricing Cards -->
 			<div class="grid md:grid-cols-2 gap-8 max-w-5xl mx-auto mb-12">
 			<!-- Starter Plan -->
-			<div class="bg-white rounded-lg border-2 border-gray-200 p-8 relative">
+			<div class="bg-white rounded-lg border-2 {isCurrentPlan('starter') ? 'border-blue-600' : 'border-gray-200'} p-8 relative">
+				{#if isCurrentPlan('starter')}
+					<div class="absolute -top-4 left-1/2 transform -translate-x-1/2">
+						<span class="bg-blue-600 text-white px-4 py-1 rounded-full text-sm font-medium">
+							CURRENT PLAN
+						</span>
+					</div>
+				{/if}
 				<div class="mb-6">
 					<h2 class="text-2xl font-bold text-gray-900 mb-2">Starter</h2>
 					<p class="text-gray-600 text-sm">For small operators managing a few trucks who want clear profit tracking and basic records.</p>
@@ -379,20 +428,26 @@
 
 				<button
 					on:click={() => handleSubscribe('starter')}
-					disabled={isLoading || !isAuthenticated}
-					class="w-full bg-gray-100 text-gray-900 py-3 rounded-lg font-medium hover:bg-gray-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+					disabled={isButtonDisabled('starter')}
+					class="w-full {isCurrentPlan('starter') ? 'bg-blue-600 text-white cursor-default' : 'bg-gray-100 text-gray-900 hover:bg-gray-200'} py-3 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
 				>
-					{isLoading ? 'Processing...' : !isAuthenticated ? 'Log In to Subscribe' : 'Start Starter Plan'}
+					{getButtonText('starter')}
 				</button>
 			</div>
 
 			<!-- Large Fleet Plan (Recommended) -->
-			<div class="bg-white rounded-lg border-2 border-blue-600 p-8 relative">
-				<!-- Recommended Badge -->
+			<div class="bg-white rounded-lg border-2 {isCurrentPlan('large-fleet') ? 'border-blue-600' : 'border-blue-600'} p-8 relative">
+				<!-- Recommended Badge or Current Plan Badge -->
 				<div class="absolute -top-4 left-1/2 transform -translate-x-1/2">
-					<span class="bg-blue-600 text-white px-4 py-1 rounded-full text-sm font-medium">
-						RECOMMENDED
-					</span>
+					{#if isCurrentPlan('large-fleet')}
+						<span class="bg-blue-600 text-white px-4 py-1 rounded-full text-sm font-medium">
+							CURRENT PLAN
+						</span>
+					{:else}
+						<span class="bg-blue-600 text-white px-4 py-1 rounded-full text-sm font-medium">
+							RECOMMENDED
+						</span>
+					{/if}
 				</div>
 
 				<div class="mb-6">
@@ -495,10 +550,10 @@
 
 				<button
 					on:click={() => handleSubscribe('large-fleet')}
-					disabled={isLoading || !isAuthenticated}
-					class="w-full bg-blue-600 text-white py-3 rounded-lg font-medium hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+					disabled={isButtonDisabled('large-fleet')}
+					class="w-full {isCurrentPlan('large-fleet') ? 'bg-blue-600 text-white cursor-default' : shouldShowUpgrade('large-fleet') ? 'bg-green-600 text-white hover:bg-green-700' : 'bg-blue-600 text-white hover:bg-blue-700'} py-3 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
 				>
-					{isLoading ? 'Processing...' : !isAuthenticated ? 'Log In to Subscribe' : 'Start Large Fleet Plan'}
+					{getButtonText('large-fleet')}
 				</button>
 			</div>
 		</div>
