@@ -199,6 +199,85 @@
 		</div>
 	</section>
 
+	<!-- Trust & Social Proof Section -->
+	<section class="py-16 bg-gradient-to-br from-blue-50 via-white to-orange-50">
+		<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+			<div class="text-center mb-12">
+				<p class="text-sm font-semibold text-blue-600 uppercase tracking-wide mb-2">Trusted by Industry Leaders</p>
+				<h2 class="text-3xl sm:text-4xl font-bold text-gray-900 mb-4">
+					Join hundreds of logistics operators
+				</h2>
+				<p class="text-lg text-gray-600 max-w-2xl mx-auto">
+					We've been helping logistics businesses streamline their operations and maximize profitability for years.
+				</p>
+			</div>
+
+			<div class="grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-8">
+				<!-- Years in Market -->
+				<div class="bg-white rounded-xl p-6 shadow-lg border border-gray-100 hover:shadow-xl transition-shadow">
+					<div class="flex flex-col items-center text-center">
+						<div class="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mb-4">
+							<svg class="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+							</svg>
+						</div>
+						<div class="text-4xl font-bold text-gray-900 mb-2">5+</div>
+						<div class="text-sm font-medium text-gray-600">Years in Market</div>
+					</div>
+				</div>
+
+				<!-- Business Owners -->
+				<div class="bg-white rounded-xl p-6 shadow-lg border border-gray-100 hover:shadow-xl transition-shadow">
+					<div class="flex flex-col items-center text-center">
+						<div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-4">
+							<svg class="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+							</svg>
+						</div>
+						<div class="text-4xl font-bold text-gray-900 mb-2">500+</div>
+						<div class="text-sm font-medium text-gray-600">Business Owners</div>
+					</div>
+				</div>
+
+				<!-- Trips Tracked -->
+				<div class="bg-white rounded-xl p-6 shadow-lg border border-gray-100 hover:shadow-xl transition-shadow">
+					<div class="flex flex-col items-center text-center">
+						<div class="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center mb-4">
+							<svg class="w-8 h-8 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
+							</svg>
+						</div>
+						<div class="text-4xl font-bold text-gray-900 mb-2">50K+</div>
+						<div class="text-sm font-medium text-gray-600">Trips Tracked</div>
+					</div>
+				</div>
+
+				<!-- Trucks Managed -->
+				<div class="bg-white rounded-xl p-6 shadow-lg border border-gray-100 hover:shadow-xl transition-shadow">
+					<div class="flex flex-col items-center text-center">
+						<div class="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mb-4">
+							<svg class="w-8 h-8 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+							</svg>
+						</div>
+						<div class="text-4xl font-bold text-gray-900 mb-2">2K+</div>
+						<div class="text-sm font-medium text-gray-600">Trucks Managed</div>
+					</div>
+				</div>
+			</div>
+
+			<!-- Trust Badge -->
+			<div class="mt-12 text-center">
+				<div class="inline-flex items-center gap-2 bg-white px-6 py-3 rounded-full shadow-md border border-gray-200">
+					<svg class="w-5 h-5 text-green-500" fill="currentColor" viewBox="0 0 20 20">
+						<path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+					</svg>
+					<span class="text-sm font-medium text-gray-700">99.9% Uptime Guarantee</span>
+				</div>
+			</div>
+		</div>
+	</section>
+
 	<!-- Key Features -->
 	<section class="py-16 bg-white">
 		<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">

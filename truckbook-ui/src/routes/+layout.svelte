@@ -6,8 +6,8 @@
 	let { children } = $props();
 	
 	// Base URL for the site
-	$: baseUrl = 'https://truckbooks.site';
-	$: currentUrl = baseUrl + $page.url.pathname;
+	const baseUrl = 'https://truckbooks.site';
+	const currentUrl = $derived(baseUrl + $page.url.pathname);
 	
 	// Logo URL - use static folder for predictable public URL
 	const logoUrl = `${baseUrl}/truckbookicon.png`;
